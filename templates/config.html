@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% block title %}Configuration{% endblock title %}
+{% block body %}
+<div id="wrapper">
+  <div id="page-wrapper">
+    <div class="row">
+      <div class="col-md-3"></div>
+      <div class="col-md-6">
+        <form action="" method="post">
+          <div class="row">
+            <h1 class="page-header">Configuration du scanner</h1>
+          </div>
+          <div class="row">
+            <div class="panel panel-primary">
+              <div class="panel-heading">
+                Fréquence et résolution
+              </div>
+              <div class="panel-body">
+                <div class="form-group">
+                  <label>Fréquence</label>
+                    {{ form.frequency(class_='form-control') }}
+                  <p class="help-block">Fréquence de rotation du laser</p>
+                  <label>Résolution angulaire</label>
+                    {{ form.resolution(class_='form-control') }}
+                  <p class="help-block">Angle entre chaque mesure</p>
+                  <label>Echo</label>
+                  {{ form.echo(class_='form-control') }}
+                  <p class="help-block">Echo enregistré</p>
+                  <label>Données supplémentaires</label>
+                  <div class="checkbox">
+                    <label>
+                      {{ form.event() }}Evènements
+                    </label>
+                    <p class="help-block">Permet d'identifier les mesures non valides</p>
+                  </div>
+                  <div class="checkbox">
+                    <label>
+                      {{ form.remission() }}Rémission
+                    </label>
+                    <p class="help-block">Intensité lumineuse reçue</p>
+                  </div>
+                  <label>Taux d'envoi</label>
+                  {% for error in form.interval.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                  {% endfor %}
+                  {{ form.interval(class_='form-control', value='1') }}
+                  <p class="help-block">Envoyer une mesure tous les n passages</p>
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <input type="submit" class="btn btn-success btn-lg" value="Envoyer">
+                    <button onclick="self.location.href='/'" type="button" class="btn btn-warning btn-lg">Annuler</button>
+                  </div>
+                </div>
+                {{ form.csrf_token }}
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="col-md-3"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock body %}

@@ -1,2 +1,1 @@
-# scanner
-LMS5xx control app for raspberry Pi with web UI
+interface web pour la gestion du LMS5xx
