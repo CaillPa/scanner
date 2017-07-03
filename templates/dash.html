@@ -1,13 +1,41 @@
-{% extends 'layout.html' %}
-{% block title %}Tableau de bord{% endblock %}
-{% block body %}
+{% extends 'layout.html' %} {% block title %}Tableau de bord{% endblock %} {% block body %}
 <div id="wrapper">
 	<div id="page-wrapper">
 		<div class="row">
-			<div class="col-lg-3"></div>
-			<div class="col-lg-6">
+			<div class="col-lg-2"></div>
+			<div class="col-lg-8">
 				<div class="row">
 					<h1 class="page-header">Tableau de bord</h1>
+				</div>
+				<div class="row">
+					<div class="panel panel-primary">
+						<div class="panel-heading">
+							Status
+						</div>
+						<div class="panel-body">
+							<div class="row">
+								<div class="col-md-6">
+										<h3>Etat de la connection : </h3>{{ connexion_status }}
+										<h3>Adresse IP du télémêtre : </h3>{{ ip }}
+										<h3>Code d'etat : </h3>{{ status_code }}
+									</br>
+								<p>
+									Légende : Codes d'état
+									<p><4 : Erreur</p>
+									<p><6 : Pas encore prêt</p>
+									<p>6-7 : Prêt</p>
+								</p>
+								</div>
+								<div class="col-md-6"></div>
+								<h3>Evenements récents</h3>
+								<ul>
+									{% for evt in events %}
+            				<li>{{ evt }}</li>
+        					{% endfor %}
+								</ul>
+							</div>
+						</div>
+					</div>
 				</div>
 				<div class="row">
 					<div class="panel panel-primary">
@@ -15,7 +43,7 @@
 							Contrôles
 						</div>
 						<div class="panel-body">
-							<p>
+							<div class="col-lg-7">
 								<div class="row">
 									<div class="col-md-4">
 										<button onclick="self.location.href='/config'" type="button" class="btn btn-primary btn-lg btn-block">Configuration</button>
@@ -44,39 +72,41 @@
 										<p class="help-block">Tester la connexion avec le télémêtre</p>
 									</div>
 								</div>
-							</p>
-						</div>
-					</div>
-				</div>
-				<div class="row">
-					<div class="panel panel-primary">
-						<div class="panel-heading">
-							Contrôles
-						</div>
-						<div class="panel-body">
-							<div class="row">
-								<div class="col-md-4">
-									<form action="/start" method="post">
-										<button type="submit" id="start" class="btn btn-success btn-block">Démarrer</button>
-									</form>
-									<form action="/stop" method="post">
-										<button id="stop" class="btn btn-warning btn-block">Arrêter</button>
-									</form>
-									<form action="/crash" method="post">
-										<button id="crash" class="btn btn-danger btn-block">Crash</button>
-									</form>
+								<br>
+								<div class="row">
+									<div class="col-md-4">
+										<form action="/status" method="post">
+											<button class="btn btn-primary btn-lg btn-block">Status</button>
+										</form>
+									</div>
+									<div class="col-md-8">
+										<p class="help-block">Récupérer le code d'état du telemètre</p>
+									</div>
 								</div>
-								<div class="col-md-8"></div>
 							</div>
-							<p class="help-block">Arrêter peut prendre quelques minutes, crash fait perdre les dernières minutes mais s'arrete tout de suite</p>
+							<div class="col-lg-5">
+								<div class="row">
+									<div class="col-md-4">
+										<form action="/start" method="post">
+											<button type="submit" id="start" class="btn btn-success btn-block">Démarrer</button>
+										</form>
+										<form action="/stop" method="post">
+											<button id="stop" class="btn btn-warning btn-block">Arrêter</button>
+										</form>
+										<form action="/crash" method="post">
+											<button id="crash" class="btn btn-danger btn-block">Crash</button>
+										</form>
+									</div>
+									<div class="col-md-8"></div>
+								</div>
+								<p class="help-block">Arrêter peut prendre quelques minutes, crash fait perdre les dernières minutes mais s'arrete tout de suite</p>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-			<div class="col-lg-3"></div>
+			<div class="col-lg-2"></div>
 		</div>
 	</div>
 </div>
 {% endblock %}
-
-

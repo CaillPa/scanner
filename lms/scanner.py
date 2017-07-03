@@ -87,7 +87,7 @@ def makeLZMA(q):
         item = q.get()
         if os.getppid() != parent:
             logging.info('Stopping Orphaned process with pid %s', os.getpid())
-            os._exit()
+            os._exit(0)
     res.append(lzc.flush())
 
     with lzma.open(path, 'wb') as f:
@@ -131,8 +131,13 @@ def main():
 
     # stops continous data aquisition properly (takes some time)
     if args.commande == 'stop':
-        with open('pid', 'r') as pidfile:
-            pid = int(pidfile.read())
+        try:
+            with open('pid', 'r') as pidfile:
+                pid = int(pidfile.read())
+        except FileNotFoundError:
+            print('PID file not found, aborting')
+            logging.warning('PID file not found, aborting')
+            return
 
         os.kill(pid, signal.SIGUSR1)
 
