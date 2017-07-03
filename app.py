@@ -1,8 +1,10 @@
 import configparser
+import os
+import multiprocessing
 import flask_login
 from flask import Flask, render_template, redirect, url_for
 from forms import UsernamePasswordForm, ScannerConfigForm
-import os
+
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -90,11 +92,20 @@ def login():
             return redirect(url_for('dash'))
     return render_template('login.html', form=form, badlogin=False)
 
+@app.route('/test', methods=['GET', 'POST'])
+def test():
+    print('test')
+    os.system('python3 lms/scanner.py -i 192.168.1.12 -p 2111 test')
+    return redirect(url_for('dash'))
+
 @app.route('/start', methods=['GET', 'POST'])
 def start():
     print('start')
-    os.system('python3 lms/scanner.py -i 192.168.1.12 -p 2111 test')
+    multiprocessing.Process(target=pstart).start()
     return redirect(url_for('dash'))
+
+def pstart():
+    os.system('python3 lms/scanner.py -i 192.168.1.12 -p 2111 start')
 
 @app.route('/stop', methods=['GET', 'POST'])
 def stop():

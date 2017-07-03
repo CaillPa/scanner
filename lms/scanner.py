@@ -81,9 +81,13 @@ def makeLZMA(q):
     lzc = lzma.LZMACompressor()
     res = deque()
     item = q.get()
+    parent = os.getppid()
     while item is not None:
         res.append(lzc.compress(item))
         item = q.get()
+        if os.getppid() != parent:
+            logging.info('Stopping Orphaned process with pid %s', os.getpid())
+            os._exit()
     res.append(lzc.flush())
 
     with lzma.open(path, 'wb') as f:

@@ -17,28 +17,30 @@
 						<div class="panel-body">
 							<p>
 								<div class="row">
-									<div class="col-md-3">
+									<div class="col-md-4">
 										<button onclick="self.location.href='/config'" type="button" class="btn btn-primary btn-lg btn-block">Configuration</button>
 									</div>
-									<div class="col-md-9">
+									<div class="col-md-8">
 										<p class="help-block">Configurer le télémêtre</p>
 									</div>
 								</div>
 								<br>
 								<div class="row">
-									<div class="col-md-3">
+									<div class="col-md-4">
 										<button class="btn btn-primary btn-lg btn-block">Scan IP</button>
 									</div>
-									<div class="col-md-9">
+									<div class="col-md-8">
 										<p class="help-block">Rechercher l'adresse du télémêtre</p>
 									</div>
 								</div>
 								<br>
 								<div class="row">
-									<div class="col-md-3">
-										<button class="btn btn-primary btn-lg btn-block">Test connexion</button>
+									<div class="col-md-4">
+										<form action="/test" method="post">
+											<button class="btn btn-primary btn-lg btn-block">Test connexion</button>
+										</form>
 									</div>
-									<div class="col-md-9">
+									<div class="col-md-8">
 										<p class="help-block">Tester la connexion avec le télémêtre</p>
 									</div>
 								</div>
@@ -52,15 +54,20 @@
 							Contrôles
 						</div>
 						<div class="panel-body">
-							<form action="/start" method="post">
-								<button type="submit" id="start" class="btn btn-success">Démarrer</button>
-							</form>
-							<form action="/stop" method="post">
-								<button id="stop" class="btn btn-warning">Arrêter</button>
-							</form>
-							<form action="/crash" method="post">
-								<button id="crash" class="btn btn-danger">Crash</button>
-							</form>
+							<div class="row">
+								<div class="col-md-4">
+									<form action="/start" method="post">
+										<button type="submit" id="start" class="btn btn-success btn-block">Démarrer</button>
+									</form>
+									<form action="/stop" method="post">
+										<button id="stop" class="btn btn-warning btn-block">Arrêter</button>
+									</form>
+									<form action="/crash" method="post">
+										<button id="crash" class="btn btn-danger btn-block">Crash</button>
+									</form>
+								</div>
+								<div class="col-md-8"></div>
+							</div>
 							<p class="help-block">Arrêter peut prendre quelques minutes, crash fait perdre les dernières minutes mais s'arrete tout de suite</p>
 						</div>
 					</div>
