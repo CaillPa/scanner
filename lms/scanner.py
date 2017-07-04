@@ -123,10 +123,17 @@ def main():
 
     # stops continous data aquisition now (loses some data)
     if args.commande == 'crash':
-        with open('pid', 'r') as pidfile:
-            pid = int(pidfile.read())
-
-        os.kill(pid, signal.SIGTERM)
+        try:
+            with open('pid', 'r') as pidfile:
+                pid = int(pidfile.read())
+        except FileNotFoundError:
+            print('PID file not found, aborting')
+            logging.warning('PID file not found, aborting')
+            return
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         return
 
     # stops continous data aquisition properly (takes some time)
@@ -138,9 +145,10 @@ def main():
             print('PID file not found, aborting')
             logging.warning('PID file not found, aborting')
             return
-
-        os.kill(pid, signal.SIGUSR1)
-
+        try:
+            os.kill(pid, signal.SIGUSR1)
+        except ProcessLookupError:
+            pass
         # waits for child processes to finish
         while len(multiprocessing.active_children()) > 0:
             pass

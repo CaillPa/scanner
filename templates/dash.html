@@ -12,27 +12,34 @@
 						<div class="panel-heading">
 							Status
 						</div>
-						<div class="panel-body">
+						<div class="panel-body" style="padding-left: 2em;padding-right: 2em;">
 							<div class="row">
-								<div class="col-md-6">
-										<h3>Etat de la connection : </h3>{{ connexion_status }}
-										<h3>Adresse IP du télémêtre : </h3>{{ ip }}
-										<h3>Code d'etat : </h3>{{ status_code }}
+								<div class="col-md-4">
+									<h3>Etat de la connection : </h3>
+									<div class="well well-sm">{{ connexion_status }}</div>
+									<h3>Adresse IP du télémêtre : </h3>
+									<div class="well well-sm">{{ ip }}</div>
+									<h3>Code d'etat : </h3>
+									<div class="well well-sm">{{ status_code }}</div>
 									</br>
-								<p>
-									Légende : Codes d'état
-									<p><4 : Erreur</p>
-									<p><6 : Pas encore prêt</p>
-									<p>6-7 : Prêt</p>
-								</p>
+									<p class="help-block">
+										Légende codes d'état</br>
+										< 4 : Erreur</br>
+										< 6 : Pas encore prêt</br>
+										6-7 : Prêt</br>
+									</p>
 								</div>
-								<div class="col-md-6"></div>
-								<h3>Evenements récents</h3>
-								<ul>
-									{% for evt in events %}
-            				<li>{{ evt }}</li>
-        					{% endfor %}
-								</ul>
+								<div class="col-md-1"></div>
+								<div class="col-md-7">
+									<h3>Evenements récents</h3>
+									<div class="well well-sm">
+										<ul>
+											{% for evt in events %}
+												<li>{{ evt }}</li>
+											{% endfor %}
+										</ul>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -55,7 +62,9 @@
 								<br>
 								<div class="row">
 									<div class="col-md-4">
+										<form action="/ping" method="post">
 										<button class="btn btn-primary btn-lg btn-block">Scan IP</button>
+										</form>
 									</div>
 									<div class="col-md-8">
 										<p class="help-block">Rechercher l'adresse du télémêtre</p>

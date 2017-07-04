@@ -1,5 +1,4 @@
 import configparser
-import os
 import subprocess
 import multiprocessing
 import time
@@ -22,8 +21,7 @@ port = '2111'
 events = deque(maxlen=10)
 
 status_info = {'connexion_status': '',\
-    'status_code': '',\
-    'ip': ip}
+    'status_code': ''}
 
 class User(flask_login.UserMixin):
     def __init__(self):
@@ -60,7 +58,7 @@ def index():
 @flask_login.login_required
 def dash():
     return render_template('dash.html', connexion_status=status_info['connexion_status'],\
-        status_code=status_info['status_code'], ip=status_info['ip'], events=events)
+        status_code=status_info['status_code'], ip=ip, events=events)
 
 @app.route('/config', methods=['GET', 'POST'])
 @flask_login.login_required
@@ -82,7 +80,7 @@ def config():
             'echoFilter': form.echo.data,\
             'event': 1 if form.event.data else 0}
 
-        with open('config.ini', 'w') as cfgfile:
+        with open('lms/config.ini', 'w') as cfgfile:
             cfg.write(cfgfile)
 
         return redirect(url_for('dash'))
@@ -107,39 +105,43 @@ def login():
 @app.route('/test', methods=['GET', 'POST'])
 def test():
     print('test')
-    rep = subprocess.run(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'test'],\
+    rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'test'],\
         stdout=subprocess.PIPE)
-    status_info['connexion_status'] = rep.stdout.decode()
+    msg = rep.communicate()[0].decode()
+    status_info['connexion_status'] = msg
+    events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - TEST: ' +\
+        msg)
     return redirect(url_for('dash'))
 
 @app.route('/status', methods=['GET', 'POST'])
 def status():
     print('status')
-    rep = subprocess.run(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'status'],\
+    rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'status'],\
         stdout=subprocess.PIPE)
-    status_info['status_code'] = rep.stdout.decode()
+    msg = rep.communicate()[0].decode()
+    status_info['status_code'] = msg
+    events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - STATUS: ' +\
+        msg)
     return redirect(url_for('dash'))
 
 @app.route('/start', methods=['GET', 'POST'])
 def start():
     print('start')
-    rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'start'],\
-        stdout=subprocess.PIPE)
-    events.append('START: ' + rep.communicate()[0].decode())
+    multiprocessing.Process(target=pstart).start()
+    events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - START: ')
     return redirect(url_for('dash'))
 
-    #multiprocessing.Process(target=pstart).start()
-    #return redirect(url_for('dash'))
-
 def pstart():
-    os.system('python3 lms/scanner.py -i 192.168.1.12 -p 2111 start')
+    subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'start'],\
+        stdout=subprocess.PIPE)
 
 @app.route('/stop', methods=['GET', 'POST'])
 def stop():
     print('stop')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'stop'],\
         stdout=subprocess.PIPE)
-    events.append('STOP: ' + rep.communicate()[0].decode())
+    events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - STOP: ' +\
+        rep.communicate()[0].decode())
     return redirect(url_for('dash'))
 
 @app.route('/crash', methods=['GET', 'POST'])
@@ -147,11 +149,33 @@ def crash():
     print('crash')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'crash'],\
         stdout=subprocess.PIPE)
-    events.append('CRASH: ' + rep.communicate()[0].decode())
+    events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - CRASH: ' +\
+        rep.communicate()[0].decode())
     return redirect(url_for('dash'))
 
-    #os.system('python3 lms/scanner.py -i 192.168.1.12 -p 2111 crash')
-    #return redirect(url_for('dash'))
+@app.route('/ping', methods=['GET', 'POST'])
+def ping():
+    print('ping')
+    # get eth0's ip broadcast address in brd
+    rep = subprocess.Popen('ip addr|grep eth0|grep brd', shell=True, stdout=subprocess.PIPE)
+    brd = rep.communicate()[0].decode().split(' ')[7]
+    # ping broadcast address
+    rep = subprocess.Popen(['ping', '-b', brd, '-I', 'eth0', '-c', '1'],\
+        shell=False, stdout=subprocess.PIPE)
+    rep = rep.communicate()[0].decode()
+    # retrieves response's IP
+    if rep.find('ttl') < 0:
+        events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) +\
+            ' - PING: Aucune réponse, vérifiez la connexion')
+        return redirect(url_for('dash'))
+    for line in rep.split('\n'):
+        if line.startswith('64'):
+            global ip
+            ip = line.split(' ')[3][0:-1]
+            break
+    events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) +\
+            ' - PING: Réponse reçue de ' + ip)
+    return redirect(url_for('dash'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
