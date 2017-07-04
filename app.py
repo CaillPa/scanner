@@ -18,7 +18,7 @@ user_db = {'admin': {'pw': 'admin'}, 'operateur': {'pw': 'op'}}
 ip = '192.168.1.12'
 port = '2111'
 
-events = deque(maxlen=10)
+events = deque(maxlen=12)
 
 status_info = {'connexion_status': '',\
     'status_code': ''}
@@ -54,6 +54,26 @@ def home():
 def index():
     return redirect(url_for('login'))
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = UsernamePasswordForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        if username not in user_db:
+            return render_template('login.html', form=form, badlogin=True)
+
+        if form.password.data == user_db[username]['pw']:
+            user = User()
+            user.id = username
+            flask_login.login_user(user)
+            return redirect(url_for('dash'))
+    return render_template('login.html', form=form, badlogin=False)
+
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    flask_login.logout_user()
+    return redirect(url_for('index'))
+
 @app.route('/dash')
 @flask_login.login_required
 def dash():
@@ -87,22 +107,8 @@ def config():
 
     return render_template('config.html', form=form)
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    form = UsernamePasswordForm()
-    if form.validate_on_submit():
-        username = form.username.data
-        if username not in user_db:
-            return render_template('login.html', form=form, badlogin=True)
-
-        if form.password.data == user_db[username]['pw']:
-            user = User()
-            user.id = username
-            flask_login.login_user(user)
-            return redirect(url_for('dash'))
-    return render_template('login.html', form=form, badlogin=False)
-
 @app.route('/test', methods=['GET', 'POST'])
+@flask_login.login_required
 def test():
     print('test')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'test'],\
@@ -114,6 +120,7 @@ def test():
     return redirect(url_for('dash'))
 
 @app.route('/status', methods=['GET', 'POST'])
+@flask_login.login_required
 def status():
     print('status')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'status'],\
@@ -125,6 +132,7 @@ def status():
     return redirect(url_for('dash'))
 
 @app.route('/start', methods=['GET', 'POST'])
+@flask_login.login_required
 def start():
     print('start')
     multiprocessing.Process(target=pstart).start()
@@ -136,6 +144,7 @@ def pstart():
         stdout=subprocess.PIPE)
 
 @app.route('/stop', methods=['GET', 'POST'])
+@flask_login.login_required
 def stop():
     print('stop')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'stop'],\
@@ -145,6 +154,7 @@ def stop():
     return redirect(url_for('dash'))
 
 @app.route('/crash', methods=['GET', 'POST'])
+@flask_login.login_required
 def crash():
     print('crash')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'crash'],\
@@ -154,11 +164,18 @@ def crash():
     return redirect(url_for('dash'))
 
 @app.route('/ping', methods=['GET', 'POST'])
+@flask_login.login_required
 def ping():
     print('ping')
     # get eth0's ip broadcast address in brd
     rep = subprocess.Popen('ip addr|grep eth0|grep brd', shell=True, stdout=subprocess.PIPE)
-    brd = rep.communicate()[0].decode().split(' ')[7]
+    brd = rep.communicate()[0].decode()
+    if brd == '':
+        events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) +\
+            " - PING: Interface eth0 non connectée")
+        return redirect(url_for('dash'))
+    brd = brd.split(' ')[7]
+
     # ping broadcast address
     rep = subprocess.Popen(['ping', '-b', brd, '-I', 'eth0', '-c', '1'],\
         shell=False, stdout=subprocess.PIPE)

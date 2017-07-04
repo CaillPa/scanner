@@ -2,10 +2,17 @@
 <div id="wrapper">
 	<div id="page-wrapper">
 		<div class="row">
-			<div class="col-lg-2"></div>
-			<div class="col-lg-8">
+			<div class="col-md-2"></div>
+			<div class="col-md-8">
 				<div class="row">
-					<h1 class="page-header">Tableau de bord</h1>
+					<div class="col-md-8">
+						<h1 class="page-header">Tableau de bord</h1>
+					</div>
+					<div class="col-md-4" style="margin-top: 3em;">
+						<form action="/logout" method="post">
+							<button class="btn btn-block btn-lg btn-info">Se déconnecter</button>
+						</form>
+					</div>
 				</div>
 				<div class="row">
 					<div class="panel panel-primary">
@@ -22,12 +29,16 @@
 									<h3>Code d'etat : </h3>
 									<div class="well well-sm">{{ status_code }}</div>
 									</br>
-									<p class="help-block">
-										Légende codes d'état</br>
-										< 4 : Erreur</br>
-										< 6 : Pas encore prêt</br>
-										6-7 : Prêt</br>
-									</p>
+									<div class="panel panel-info">
+										<div class="panel-heading">
+											Légende codes d'état
+										</div>
+										<div class="panel-body">
+											< 4 : Erreur</br>
+											< 6 : Pas encore prêt</br>
+											6-7 : Prêt</br>
+										</div>
+									</div>
 								</div>
 								<div class="col-md-1"></div>
 								<div class="col-md-7">
@@ -53,17 +64,8 @@
 							<div class="col-lg-7">
 								<div class="row">
 									<div class="col-md-4">
-										<button onclick="self.location.href='/config'" type="button" class="btn btn-primary btn-lg btn-block">Configuration</button>
-									</div>
-									<div class="col-md-8">
-										<p class="help-block">Configurer le télémêtre</p>
-									</div>
-								</div>
-								<br>
-								<div class="row">
-									<div class="col-md-4">
 										<form action="/ping" method="post">
-										<button class="btn btn-primary btn-lg btn-block">Scan IP</button>
+											<button class="btn btn-primary btn-lg btn-block">Scan IP</button>
 										</form>
 									</div>
 									<div class="col-md-8">
@@ -92,18 +94,29 @@
 										<p class="help-block">Récupérer le code d'état du telemètre</p>
 									</div>
 								</div>
+								<br>
+								<div class="row">
+									<div class="col-md-4">
+										<form action="/config" method="post">
+											<button class="btn btn-primary btn-lg btn-block">Configuration</button>
+										</form>
+									</div>
+									<div class="col-md-8">
+										<p class="help-block">Configurer le télémêtre</p>
+									</div>
+								</div>
 							</div>
 							<div class="col-lg-5">
 								<div class="row">
 									<div class="col-md-4">
 										<form action="/start" method="post">
-											<button type="submit" id="start" class="btn btn-success btn-block">Démarrer</button>
+											<button type="submit" id="start" class="btn btn-success btn-lg btn-block">Démarrer</button>
 										</form>
 										<form action="/stop" method="post">
-											<button id="stop" class="btn btn-warning btn-block">Arrêter</button>
+											<button id="stop" class="btn btn-warning btn-lg btn-block">Arrêter</button>
 										</form>
 										<form action="/crash" method="post">
-											<button id="crash" class="btn btn-danger btn-block">Crash</button>
+											<button id="crash" class="btn btn-danger btn-lg btn-block">Crash</button>
 										</form>
 									</div>
 									<div class="col-md-8"></div>
@@ -114,7 +127,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="col-lg-2"></div>
+			<div class="col-md-2"></div>
 		</div>
 	</div>
 </div>
