@@ -9,8 +9,8 @@ class LMS5xx:
         Class responsible for communicating with LMS5xx device
     """
     def __init__(self):
-        self.sock = None
-        self.__connected = False
+        self.sock = None # tcp socket
+        self.__connected = False # active connection flag
 
     def connect(self, host, port):
         """
@@ -311,38 +311,3 @@ class LMS5xx:
 
         logging.debug('startDevice() sent: %s', buf)
         logging.debug('startDevice() received: %s', rec)
-
-    def extractData(self):
-        """
-            Reads items in queue and separate them in telegrams
-            Telegrams starts with b'\x02' and ends with b'\x03'
-            Stores valid telegrams in self.trames
-        """
-        logging.debug('Entering parsing loop')
-        while not self.q.empty() or self.__running:
-            while self._parseTelegram():
-                pass
-            try:
-                self.buff = self.buff+bytearray(self.q.get_nowait())
-                self.q.task_done()
-            except queue.Empty:
-                pass
-        logging.debug('Leaving parsing loop')
-
-
-    def _parseTelegram(self):
-        """
-            Private method used to parse items read from the queue
-            Returns true upon parsing a datagram, else False
-        """
-        minsize = 20
-        firstETX = self.buff.find(b'\x03')
-        lastSTX = self.buff[:firstETX].rfind(b'\x02')
-        if firstETX == -1 or lastSTX == -1:
-            return False
-        if firstETX - lastSTX < minsize:
-            return False
-
-        self.trames.append(self.buff[lastSTX:firstETX+1])
-        self.buff = self.buff[firstETX+1:]
-        return True

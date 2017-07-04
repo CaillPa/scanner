@@ -11,9 +11,12 @@ from collections import deque
 from LMS5xx import LMS5xx
 from structs import scanCfg, scanDataCfg
 
+# global running flag
+STOP = False
+
 def loadConfig(filename):
     """
-        Loads config stored in filename
+        Loads config stored in filename and returns appropriate data structures
         defaults to config in 'defaults.ini'
     """
     config = configparser.ConfigParser()
@@ -43,8 +46,8 @@ def loadConfig(filename):
 
 def saveConfig(lms, cfg, datacfg, echo):
     """
-        Write config stored in data structures to LMS
-        Saves config to EEPROM and restarts device
+        Write config stored in data structures to LMS device
+        Saves config to EEPROM and restarts the device
     """
     lms.login()
     lms.setTime()
@@ -65,7 +68,7 @@ def saveTxt(q):
 
 def saveGz(q):
     """
-        Saves content of arg q as compressed plaintext
+        Saves content of arg q as gzip compressed plaintext
     """
     path = '/media/usb/'+time.strftime('%d%b%Y%H%M%S', time.localtime())+'.txt.gz'
     with gzip.open(path, 'wb') as gz:
@@ -74,19 +77,21 @@ def saveGz(q):
 
 def makeLZMA(q):
     """
-        Compress elements in q until None is detected then saves in file
+        Compress elements in q until None is detected then saves result in file
+        Filename corresponds to the process' start date
         Meant to be run as a separate process
+        Will stop if process is orphaned, hopefuly
     """
     path = '/media/usb/'+time.strftime('%Y%m%d%H%M%S', time.localtime())+'.txt.xz'
     lzc = lzma.LZMACompressor()
     res = deque()
     item = q.get()
     parent = os.getppid()
-    while item is not None:
+    while item is not None: # Receiving None means no more data is coming
         res.append(lzc.compress(item))
         item = q.get()
-        if os.getppid() != parent:
-            logging.info('Stopping Orphaned process with pid %s', os.getpid())
+        if os.getppid() != parent: # detect if this process is orphaned (parent crash)
+            logging.debug('Stopping Orphaned process with pid %s', os.getpid())
             os._exit(0)
     res.append(lzc.flush())
 
@@ -97,14 +102,11 @@ def makeLZMA(q):
 
 def signalHandler(a, b):
     """
-        handle received signal to tell the main process to stop
+        handle received signal to tell the main process to stop via global flag
     """
     global STOP
     STOP = True
     logging.info('Stop signal received')
-
-# global running flag
-STOP = False
 
 def main():
     # --- ARGUMENT PARSING ---
@@ -119,10 +121,12 @@ def main():
 
     args = parser.parse_args()
     logging.info('Command : %s', args.commande)
-    signal.signal(signal.SIGUSR1, signalHandler)
+    signal.signal(signal.SIGUSR1, signalHandler) # attach SIGUSR1 to signalHandler()
 
-    # stops continous data aquisition now (loses some data)
     if args.commande == 'crash':
+        """
+            Stops continous data aquisition NOW (loses some data)
+        """
         try:
             with open('pid', 'r') as pidfile:
                 pid = int(pidfile.read())
@@ -131,13 +135,17 @@ def main():
             logging.warning('PID file not found, aborting')
             return
         try:
-            os.kill(pid, signal.SIGTERM)
+            # REGARDE ICI SI CA MERDE
+            os.kill(pid, signal.SIGUSR1)
         except ProcessLookupError:
             pass
         return
 
-    # stops continous data aquisition properly (takes some time)
     if args.commande == 'stop':
+        """
+            Stops continous data aquisition properly
+            Waits for compression process to finish
+        """
         try:
             with open('pid', 'r') as pidfile:
                 pid = int(pidfile.read())
@@ -162,54 +170,62 @@ def main():
         logging.critical('Aborting ...')
         return
 
-    # loads scanner config
     cfg, datacfg, echo = loadConfig(args.load)
 
-    # connectivity test
     if args.commande == 'test':
+        """
+            Connectivity test
+        """
         lms.disconnect()
         print('OK')
         return
 
-    # outputs status of scanner
     if args.commande == 'status':
+        """
+            Cutputs status of scanner
+        """
         status = lms.queryStatus()
         print(status)
         return
 
-    # save config to EEPROM
     if args.commande == 'save':
+        """
+            Save config to EEPROM so it doesn't change upon powering off the device
+        """
         saveConfig(lms, cfg, datacfg, echo)
         return
 
-    # starts continous data aquisition
     if args.commande == 'start':
-        #load config
+        """
+            Starts continous data aquisition with real-time compression on multiple processes
+            Stops properly when receiving SIGUSR1
+        """
+        # load config to device
         saveConfig(lms, cfg, datacfg, echo)
         # saves process pid to file
         with open('pid', 'w') as fic:
             fic.write(str(os.getpid()))
             fic.close()
 
-        #wait for scanner to be ready
+        # wait for scanner to be ready
         while lms.queryStatus() < 7:
             time.sleep(0.5)
 
-        lms.scanContinous(1)
-        while not STOP:
+        lms.scanContinous(1) # starts LMS continous data acquisition
+        while not STOP: # global running flag
             q = multiprocessing.Queue()
             p = multiprocessing.Process(target=makeLZMA, args=(q,))
             p.start()
-            logging.info('Spawning new process with pid %s', p.pid)
-            for _ in range(args.size):
+            logging.debug('Spawning new process with pid %s', p.pid)
+            for _ in range(args.size): # will send size elements to compression process
                 dat = lms.getScanData(0.1)
                 if dat is not None:
                     q.put(dat)
-            q.put(None)
+            q.put(None) # tell compression process that no more data is coming
             q.close()
-            multiprocessing.active_children()
+            multiprocessing.active_children() # force close terminated processes
 
-        lms.scanContinous(0)
+        lms.scanContinous(0) # stops LMS continous data acquisition
         lms.stopMeas()
         logging.info('Main process terminated')
         return

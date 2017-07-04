@@ -7,23 +7,28 @@ import flask_login
 from flask import Flask, render_template, redirect, url_for
 from forms import UsernamePasswordForm, ScannerConfigForm
 
+"""
+    GLOBALS
+"""
 app = Flask(__name__)
 app.config.from_object('config')
-
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 
+# user database
 user_db = {'admin': {'pw': 'admin'}, 'operateur': {'pw': 'op'}}
-
+# default connection properties
 ip = '192.168.1.12'
 port = '2111'
-
-events = deque(maxlen=12)
 
 status_info = {'connexion_status': '',\
     'status_code': '',\
     'storage': ''}
+events = deque(maxlen=12)
 
+"""
+    USER MANAGEMENT
+"""
 class User(flask_login.UserMixin):
     def __init__(self):
         self.id = ''
@@ -46,6 +51,10 @@ def request_loader(request):
     user.id = username
     user.is_authenticated = request.form['pw'] == user_db[username]['pw']
     return user
+
+"""
+    ROUTES
+"""
 
 @app.route('/')
 def home():
@@ -80,7 +89,8 @@ def logout():
 def dash():
     check_storage()
     return render_template('dash.html', connexion_status=status_info['connexion_status'],\
-        status_code=status_info['status_code'], ip=ip, events=events, storage=status_info['storage'])
+        status_code=status_info['status_code'], ip=ip, events=events,\
+        storage=status_info['storage'])
 
 @app.route('/config', methods=['GET', 'POST'])
 @flask_login.login_required
@@ -112,6 +122,9 @@ def config():
 @app.route('/test', methods=['GET', 'POST'])
 @flask_login.login_required
 def test():
+    """
+        Test connection to LMS
+    """
     print('test')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'test'],\
         stdout=subprocess.PIPE)
@@ -124,6 +137,9 @@ def test():
 @app.route('/status', methods=['GET', 'POST'])
 @flask_login.login_required
 def status():
+    """
+        Query LMS' status
+    """
     print('status')
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'status'],\
         stdout=subprocess.PIPE)
@@ -168,8 +184,11 @@ def crash():
 @app.route('/ping', methods=['GET', 'POST'])
 @flask_login.login_required
 def ping():
+    """
+        Pings eth0's broadcast IP and assigns responding IP to ip global
+    """
     print('ping')
-    # get eth0's ip broadcast address in brd
+    # get eth0's broadcast IP address
     rep = subprocess.Popen('ip addr|grep eth0|grep brd', shell=True, stdout=subprocess.PIPE)
     brd = rep.communicate()[0].decode()
     if brd == '':
@@ -182,6 +201,7 @@ def ping():
     rep = subprocess.Popen(['ping', '-b', brd, '-I', 'eth0', '-c', '1'],\
         shell=False, stdout=subprocess.PIPE)
     rep = rep.communicate()[0].decode()
+
     # retrieves response's IP
     if rep.find('ttl') < 0:
         events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) +\
@@ -197,6 +217,9 @@ def ping():
     return redirect(url_for('dash'))
 
 def check_storage():
+    """
+        Checks /dev/sda1 storage state, updates status_info with fill percentage
+    """
     rep = subprocess.Popen('df -kh /dev/sda1', shell=True, stdout=subprocess.PIPE)
     rep = rep.communicate()[0].decode().split(' ')
     for elt in reversed(rep):
