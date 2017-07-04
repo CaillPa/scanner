@@ -21,7 +21,8 @@ port = '2111'
 events = deque(maxlen=12)
 
 status_info = {'connexion_status': '',\
-    'status_code': ''}
+    'status_code': '',\
+    'storage': ''}
 
 class User(flask_login.UserMixin):
     def __init__(self):
@@ -77,8 +78,9 @@ def logout():
 @app.route('/dash')
 @flask_login.login_required
 def dash():
+    check_storage()
     return render_template('dash.html', connexion_status=status_info['connexion_status'],\
-        status_code=status_info['status_code'], ip=ip, events=events)
+        status_code=status_info['status_code'], ip=ip, events=events, storage=status_info['storage'])
 
 @app.route('/config', methods=['GET', 'POST'])
 @flask_login.login_required
@@ -193,6 +195,16 @@ def ping():
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) +\
             ' - PING: Réponse reçue de ' + ip)
     return redirect(url_for('dash'))
+
+def check_storage():
+    rep = subprocess.Popen('df -kh /dev/sda1', shell=True, stdout=subprocess.PIPE)
+    rep = rep.communicate()[0].decode().split(' ')
+    for elt in reversed(rep):
+        if elt.endswith('%'):
+            global status_info
+            status_info['storage'] = elt[0:-1]
+            break
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
