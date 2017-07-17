@@ -1,5 +1,8 @@
-# Values should be integers
-
+"""
+    Structures contenant les parametres du telemetre
+    Les valeurs doivent etre des entiers, pas des octets
+"""
+# configuration du telemetre
 class scanCfg():
     def __init__(self):
         self.scaningFrequency = 5000
@@ -7,6 +10,7 @@ class scanCfg():
         self.startAngle = -50000
         self.stopAngle = 1850000
 
+# configuration des donnees du telemetre
 class scanDataCfg():
     def __init__(self):
         self.remission = 1

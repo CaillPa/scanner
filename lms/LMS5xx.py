@@ -6,7 +6,7 @@ from structs import scanCfg
 
 class LMS5xx:
     """
-        Class responsible for communicating with LMS5xx device
+        Classe permettant de communiquer avec le LMS 5xx
     """
     def __init__(self):
         self.sock = None # tcp socket
@@ -14,9 +14,9 @@ class LMS5xx:
 
     def connect(self, host, port):
         """
-            Connect to the LMS5xx
-            :param host: host name or ip address
-            :param port: port number
+            Connection au LMS 5xx
+            @param host: adresse IP du telemetre
+            @param port: port d'écoute du LMS (2111)
         """
         if not self.__connected:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,33 +24,33 @@ class LMS5xx:
             try:
                 self.sock.connect((host, port))
                 self.__connected = True
-                logging.info('LMS connection successful')
+                logging.info('LMS connecte avec succes')
             except socket.timeout:
-                logging.error('Unable to connect to LMS')
+                logging.error('Impossible de se connecter au LMS')
                 self.__connected = False
 
     def disconnect(self):
         """
-            Disconnect from the LMS5xx
+            Deconnection du telemetre (fermeture du socket)
         """
         if self.__connected:
             self.sock.close()
             self.__connected = False
-            logging.info('Disconnected from LMS')
+            logging.info('Deconnecte du LMS')
 
     def isConnected(self):
         """
-            Get status of connection
-            :return: Status of connection
-            :rtype: boolean
+            Retourne l'etat de la connection (conencte/deconnecte)
+            @return: Etat de la connection (True = connecte)
         """
         return self.__connected
 
     def setTime(self):
         """
-            Set scanner's internal clock to local time
+            Synchronise l'horloge du telemetre sur celle de l'hote
         """
         tps = time.localtime()
+        # conversion de l'heure en hexa
         year = bytes(hex(tps.tm_year)[2:].upper(), encoding='utf8')
         month = bytes(hex(tps.tm_mon)[2:].upper(), encoding='utf8')
         day = bytes(hex(tps.tm_mday)[2:].upper(), encoding='utf8')
@@ -63,126 +63,134 @@ class LMS5xx:
 
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('setTime(): Not all bytes sent')
+            logging.error("setTime(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('setTime(): Invalid packet received')
+            logging.warning('setTime(): Trame recue non valide')
 
-        logging.debug('setTime() sent: %s', buf)
-        logging.debug('setTime() received: %s', rec)
+        logging.debug('setTime() envoye: %s', buf)
+        logging.debug('setTime() recu: %s', rec)
 
     def setEchoFilter(self, code):
         """
-            Set Scanner's echo filter mode
-            :param code: echo filter code (integer)
-                0 : first echo
-                1 : all echos
-                2 : last echo
+            Change le parametre du filtre d'echo du telemetre
+            @param code: code du filtre d'echo
+                0 : premier echo
+                1 : tous les echos
+                2 : dernier echo
         """
         code = bytes(hex(code)[2:].upper(), encoding='utf8')
         buf = b'\x02sWN FREchoFilter '+code+b'\x03'
 
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('setEchoFilter(): Not all bytes sent')
+            logging.error("setEchoFilter(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('setTime(): Invalid packet received')
+            logging.warning('setTime(): Trame recue non valide')
 
-        logging.debug('setEchoFilter() sent: %s', buf)
-        logging.debug('setEchoFilter() received: %s', rec)
+        logging.debug('setEchoFilter() envoye: %s', buf)
+        logging.debug('setEchoFilter() recu: %s', rec)
 
     def startMeas(self):
         """
-            After receiving this command LMS5XX unit starts spinning laser and measuring
+            Apres avoir recu cette commande, le telemetre fait tourner le laser
+            et commence a mesurer
         """
         buf = b'\x02sMN LMCstartmeas\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('startMeas(): Not all bytes sent')
+            logging.error("startMeas(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('startMeas(): Invalid packet received')
+            logging.warning('startMeas(): Trame recue non valide')
 
-        logging.debug('startMeas() sent: %s', buf)
-        logging.debug('startMeas() received: %s', rec)
+        logging.debug('startMeas() envoye: %s', buf)
+        logging.debug('startMeas() recu: %s', rec)
 
     def stopMeas(self):
         """
-            After receiving this command LMS5XX unit stop spinning laser and measuring
+            Apres avoir recu cette commande, le telemetre arrete de faire tourner
+            le laser et arrete de mesurer
         """
         buf = b'\x02sMN LMCstopmeas\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('stopMeas(): Not all bytes sent')
+            logging.error("stopMeas(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('stopMeas(): Invalid packet received')
+            logging.warning('stopMeas(): Trame recue non valide')
 
-        logging.debug('stopMeas() sent: %s', buf)
-        logging.debug('stopMeas() received: %s', rec)
+        logging.debug('stopMeas() envoye: %s', buf)
+        logging.debug('stopMeas() recu: %s', rec)
 
     def queryStatus(self):
         """
-            Get current status of LMS5xx device
-            :return: status of LMS5xx device
-            :rtype: integer
+            Retourne le code d'etat actuel tu telemetre
+            @return: code d'etat du LMS 5xx
+                0: indefini
+                1: initialisation
+                2: configuration
+                3: ?
+                4: tourne
+                5: en preparation
+                6: pret
+                7: en mesure
         """
         buf = b'\x02sRN STlms\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('queryStatus(): Not all bytes sent')
+            logging.error("queryStatus(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('queryStatus(): Invalid packet received')
+            logging.warning('queryStatus(): Trame recue non valide')
 
-        logging.debug('queryStatus() sent: %s', buf)
-        logging.debug('queryStatus() received: %s', rec)
+        logging.debug('queryStatus() envoye: %s', buf)
+        logging.debug('queryStatus() recu: %s', rec)
 
         return int(rec.split(b'\x20')[2].decode())
 
     def login(self):
         """
-            Log into LMS5xx unit
-            Increase privilege level, giving ability to change device configuration
+            Authentification. Augmente le niveau d'acces, permet de changer la configuration
         """
         buf = b'\x02sMN SetAccessMode 03 F4724744\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('login(): Not all bytes sent')
+            logging.error("login(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('login(): Invalid packet received')
+            logging.warning('login(): Trame recue non valide')
 
-        logging.debug('login() sent: %s', buf)
-        logging.debug('login() received: %s', rec)
+        logging.debug('login() envoye: %s', buf)
+        logging.debug('login() recu: %s', rec)
 
     def getScanCfg(self):
         """
-            Get current scan configuration
-            :return: scanning frequency
-            :return: scanning resolution
-            :return: start angle
-            :return: stop angle
-            :rtype: scanCfg class
+            Retourne la configuration actuelle du scanner
+            @rtype: structure scanCfg
+            @return: frequence de scan
+            @return: resolution du scan
+            @return: angle de depart
+            @return: angle d'arret
         """
         buf = b'\x02sRN LMPscancfg\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('getScanCfg(): Not all bytes sent')
+            logging.error("getScanCfg(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('getScanCfg(): Invalid packet received')
+            logging.warning('getScanCfg(): Trame recue non valide')
 
-        logging.debug('getScanCfg() sent: %s', buf)
-        logging.debug('getScanCfg() received: %s', rec)
+        logging.debug('getScanCfg() envoye: %s', buf)
+        logging.debug('getScanCfg() recu: %s', rec)
 
         data = rec.split(b'\x20')
         cfg = scanCfg()
@@ -194,8 +202,8 @@ class LMS5xx:
 
     def setScanCfg(self, cfg):
         """
-            Set scan configuration
-            :param cfg: scanCfg class containing scan configuration
+            Change la configuration du scan
+            @param cfg: structure scanCfg contenant les parametres
         """
         scaningFrequency = bytes(hex(cfg.scaningFrequency & 0xFFFFFFFF)[2:].upper(), encoding='utf8')
         angleResolution = bytes(hex(cfg.angleResolution & 0xFFFFFFFF)[2:].upper(), encoding='utf8')
@@ -207,19 +215,19 @@ class LMS5xx:
 
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('setScanCfg(): Not all bytes sent')
+            logging.error("setScanCfg(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('setScanCfg(): Invalid packet received')
+            logging.warning('setScanCfg(): Trame recue non valide')
 
-        logging.debug('setScanCfg() sent: %s', buf)
-        logging.debug('setScanCfg() received: %s', rec)
+        logging.debug('setScanCfg() envoye: %s', buf)
+        logging.debug('setScanCfg() recu: %s', rec)
 
     def setScanDataCfg(self, cfg):
         """
-            Set scan data configuration
-            :param cfg: scanDataCfg class containing scan data configuration
+            Change la configuration d'acquisition des donnees
+            @param cfg: structure scanDataCfg contenant les parametres
         """
         remission = bytes(hex(cfg.remission & 0xFF)[2:].upper(), encoding='utf8')
         resolution = bytes(hex(cfg.resolution & 0xFF)[2:].upper(), encoding='utf8')
@@ -235,39 +243,40 @@ class LMS5xx:
 
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('setScanDataCfg(): Not all bytes sent')
+            logging.error("setScanDataCfg(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('setScanDataCfg(): Invalid packet received')
+            logging.warning('setScanDataCfg(): Trame recue non valide')
 
-        logging.debug('setScanDataCfg() sent: %s', buf)
-        logging.debug('setScanDataCfg() received: %s', rec)
+        logging.debug('setScanDataCfg() envoye: %s', buf)
+        logging.debug('setScanDataCfg() recu: %s', rec)
 
     def scanContinous(self, start):
         """
-            Start or stop continous data acquisition
-            :param start: 1 to start, 0 to stop
+            Demarre ou arrete l'acquisition continue de donnees
+            (le telemetre envoie des donnees en continu)
+            @param start: 1 pour demarrer, 0 pour arreter
         """
         start = bytes(hex(start)[2:].upper(), encoding='utf8')
         buf = b'\x02sEN LMDscandata '+start+b'\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('scanContinous(): Not all bytes sent')
+            logging.error("scanContinous(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('scanContinous(): Invalid packet received')
+            logging.warning('scanContinous(): Trame recue non valide')
 
-        logging.debug('scanContinous() sent: %s', buf)
-        logging.debug('scanContinous() received: %s', rec)
+        logging.debug('scanContinous() envoye: %s', buf)
+        logging.debug('scanContinous() recu: %s', rec)
 
     def getScanData(self, timeout):
         """
-            Return single scan message
-            :param timeout: max blocking time in second of select() function
-            :return: Scan message or None if nothing received within timeout
-            :rtype: bytes or None
+            Retourne une trame de donnees
+            @param timeout: temps d'attente max d'une trame
+            @return: Trame recue ou None si rien recu avant le timeout
+            @rtype: bytes ou None
         """
         try:
             read, _, _ = select.select((self.sock,), (), (), timeout)
@@ -281,33 +290,34 @@ class LMS5xx:
 
     def saveConfig(self):
         """
-            Parameters are saved in the EEPROM of the LMS and will be available after reboot
+            Enregistre les parametres dans la memeoire du telemetre
+            Les reglages seront gardes apres un redemarrage
         """
         buf = b'\x02sMN mEEwriteall\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('saveConfig(): Not all bytes sent')
+            logging.error("saveConfig(): Tous les octets n'ont pas ete envoyes")
 
         time.sleep(1)   #writing to EEPROM takes some time
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('saveConfig(): Invalid packet received')
+            logging.warning('saveConfig(): Trame recue non valide')
 
-        logging.debug('saveConfig() sent: %s', buf)
-        logging.debug('saveConfig() received: %s', rec)
+        logging.debug('saveConfig() envoye: %s', buf)
+        logging.debug('saveConfig() recu: %s', rec)
 
     def startDevice(self):
         """
-            The device is returned to measurement mode after configuration
+            Remet l'appareil en mode mesure apres la configuration
         """
         buf = b'\x02sMN Run\x03'
         sent = self.sock.send(buf)
         if sent < len(buf):
-            logging.error('startDevice(): Not all bytes sent')
+            logging.error("startDevice(): Tous les octets n'ont pas ete envoyes")
 
         rec = self.sock.recv(128)
         if bytes([rec[0]]) != b'\x02':
-            logging.warning('startDevice(): Invalid packet received')
+            logging.warning('startDevice(): Trame recue non valide')
 
-        logging.debug('startDevice() sent: %s', buf)
-        logging.debug('startDevice() received: %s', rec)
+        logging.debug('startDevice() envoye: %s', buf)
+        logging.debug('startDevice() recu: %s', rec)

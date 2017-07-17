@@ -14,10 +14,15 @@ from structs import scanCfg, scanDataCfg
 # global running flag
 STOP = False
 
+# chemin d'enregistrement des donnees
+PATH = '/media/usb/'
+
 def loadConfig(filename):
     """
-        Loads config stored in filename and returns appropriate data structures
-        defaults to config in 'defaults.ini'
+        Charge la config stockee dans filename et retourne les structures adequates
+        Si pas de parametre, prend la config dans defaults.ini
+        @param filename: fichier contenant les parametres
+        @return structure scanCfg, structure scanDataCfg, entier
     """
     config = configparser.ConfigParser()
     config.read(filename)
@@ -25,6 +30,7 @@ def loadConfig(filename):
     defaults = configparser.ConfigParser()
     defaults.read(os.path.join(os.path.dirname(__file__), 'defaults.ini'))
     defaults = defaults['DEFAULT']
+
     cfg = scanCfg()
     cfg.scaningFrequency = int(config.get('scaningFrequency', defaults['scaningFrequency']))
     cfg.angleResolution = int(config.get('angleResolution', defaults['angleResolution']))
@@ -46,8 +52,12 @@ def loadConfig(filename):
 
 def saveConfig(lms, cfg, datacfg, echo):
     """
-        Write config stored in data structures to LMS device
-        Saves config to EEPROM and restarts the device
+        Ecris la config des structures en parametre dans la memoire du telemetre
+        Enregistre la config dans la memoire EEPROM et redemarre le telemetre
+        @param lms: classe LMS5xx
+        @param cfg: structure scanCfg
+        @param datacfg: structure scanDataCfg
+        @param echo: entier
     """
     lms.login()
     lms.setTime()
@@ -59,57 +69,63 @@ def saveConfig(lms, cfg, datacfg, echo):
 
 def saveTxt(q):
     """
-        Saves content of arg q as plaintext
+        Enregistre le contenu de q en texte brut non compresse
+        @param q: iterable contenant des bytes a enregistrer
     """
-    path = '/media/usb/'+time.strftime('%d%b%Y%H%M%S', time.localtime())+'.txt'
+    path = PATH+time.strftime('%d%b%Y%H%M%S', time.localtime())+'.txt'
     with open(path, 'wb') as raw:
         raw.write(b''.join(q))
         raw.close()
 
 def saveGz(q):
     """
-        Saves content of arg q as gzip compressed plaintext
+        Enregistre le contenu de q en texte compresse (gzip)
+        @param q: iterable contenant des bytes a enregistrer
     """
-    path = '/media/usb/'+time.strftime('%d%b%Y%H%M%S', time.localtime())+'.txt.gz'
+    path = PATH+time.strftime('%d%b%Y%H%M%S', time.localtime())+'.txt.gz'
     with gzip.open(path, 'wb') as gz:
         gz.write(b''.join(q))
         gz.close()
 
 def makeLZMA(q):
     """
-        Compress elements in q until None is detected then saves result in file
-        Filename corresponds to the process' start date
-        Meant to be run as a separate process
-        Will stop if process is orphaned, hopefuly
+        Compresse les elements dans q jusqu'a rencontrer None puis enregistre le resultat
+        Le nom du fichier correspond a la date de debut du processus
+        Cette fonction est faite pour etre executee dans un processus separe
+        (des elements peuvent arriver dans q au fil du temps)
+        Ce processus s'arrete si son processus pere s'arrete
+        @param q: iterable contenant les trames a compresser
     """
-    path = '/media/usb/'+time.strftime('%Y%m%d%H%M%S', time.localtime())+'.txt.xz'
+    path = PATH+time.strftime('%Y%m%d%H%M%S', time.localtime())+'.txt.xz'
     lzc = lzma.LZMACompressor()
-    res = deque()
-    item = q.get()
+    res = deque() # file contenant les objects compresses
+    item = q.get() # objet courant lu dans q
     parent = os.getppid()
-    while item is not None: # Receiving None means no more data is coming
+    while item is not None: # None signifie qu'aucune autre donnee arrive
         res.append(lzc.compress(item))
         item = q.get()
-        if os.getppid() != parent: # detect if this process is orphaned (parent crash)
-            logging.debug('Stopping Orphaned process with pid %s', os.getpid())
-            os._exit(0)
-    res.append(lzc.flush())
+        if os.getppid() != parent: # si ce processus est orphelin (crash du process pere)
+            logging.debug('Arret du processus orphelin avec le PID %s', os.getpid())
+            os._exit(0) # arret direct du processus
+    res.append(lzc.flush()) # fini la compression des donnees
 
+    # enregistrement dans le fichier
     with lzma.open(path, 'wb') as f:
         f.write(b''.join(res))
-    logging.info('Quitting process with pid %s', os.getpid())
+    logging.info('Fin du processus avec le PID %s', os.getpid())
     return
 
 def signalHandler(a, b):
     """
-        handle received signal to tell the main process to stop via global flag
+        A la reception d'un signal cette fonction change l'etat du flag global STOP
+        Cela arrete l'acquisition de donnees continue proprement depuis un autre processus
     """
     global STOP
     STOP = True
-    logging.info('Stop signal received')
+    logging.info("Signal d'arret recu")
 
 def main():
-    # --- ARGUMENT PARSING ---
+    # --- PARSING DES ARGUMENTS ---
     parser = argparse.ArgumentParser(description='LMS5xx CLI tool')
     parser.add_argument('-i', '--ip', default='192.168.1.12', help='Adresse IP du telemetre')
     parser.add_argument('-p', '--port', default='2111', type=int, help='Port du telemetre')
@@ -119,120 +135,132 @@ def main():
     parser.add_argument('commande', choices=['test', 'start', 'stop', 'save', 'status', 'crash'],\
         help='Commande effectuee par le telemetre')
 
-    args = parser.parse_args()
-    logging.info('Command : %s', args.commande)
-    signal.signal(signal.SIGUSR1, signalHandler) # attach SIGUSR1 to signalHandler()
+    args = parser.parse_args() # parse les arguments
+    logging.info('Commande : %s', args.commande)
+    signal.signal(signal.SIGUSR1, signalHandler) # attache SIGUSR1 a signalHandler()
 
+    # --- CRASH ---
     if args.commande == 'crash':
         """
-            Stops continous data aquisition NOW (loses some data)
+            Arrete l'acquisition de donnees continue immediatement mais perd des donnees
         """
         try:
             with open('pid', 'r') as pidfile:
                 pid = int(pidfile.read())
         except FileNotFoundError:
-            print('PID file not found, aborting')
-            logging.warning('PID file not found, aborting')
+            print('Fichier PID introuvable, abandon')
+            logging.warning('Fichier PID introuvable, abandon')
             return
         try:
-            # REGARDE ICI SI CA MERDE
-            os.kill(pid, signal.SIGUSR1)
+            # tue le processus, brutalement
+            os.kill(pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
         return
 
+    # --- STOP ---
     if args.commande == 'stop':
         """
-            Stops continous data aquisition properly
-            Waits for compression process to finish
+            Arrete l'acquisition de donnees continue sans perte de donnees
+            Attend que les processus de compression soient termines
         """
         try:
             with open('pid', 'r') as pidfile:
                 pid = int(pidfile.read())
         except FileNotFoundError:
-            print('PID file not found, aborting')
-            logging.warning('PID file not found, aborting')
+            print('Fichier PID introuvable, abandon')
+            logging.warning('Fichier PID introuvable, abandon')
             return
         try:
+            # change l'etat du flag STOP via signalHandler()
             os.kill(pid, signal.SIGUSR1)
         except ProcessLookupError:
             pass
-        # waits for child processes to finish
-        while len(multiprocessing.active_children()) > 0:
-            pass
-        return
 
+    # toutes les autres commandes necessitent de se connecter au telemetre
     lms = LMS5xx()
-    logging.debug('Connecting to LMS')
+    logging.debug('Connexion au LMS 5xx')
     lms.connect(args.ip, args.port)
     if not lms.isConnected():
         print('Impossible de se connecter au telemetre')
-        logging.critical('Aborting ...')
+        logging.critical('Abandon ...')
+        # quitte directement le programme si on ne peut pas se connecter au telemetre
         return
 
+    # chargement des config depuis le fichier
     cfg, datacfg, echo = loadConfig(args.load)
 
+    # --- TEST ---
     if args.commande == 'test':
         """
-            Connectivity test
+            Test de connexion
         """
         lms.disconnect()
         print('OK')
         return
 
+    # --- STATUS ---
     if args.commande == 'status':
         """
-            Cutputs status of scanner
+            Affiche le code d'etat du telemetre
         """
         status = lms.queryStatus()
         print(status)
         return
 
+    # --- SAVE ---
     if args.commande == 'save':
         """
-            Save config to EEPROM so it doesn't change upon powering off the device
+            Enregistre la config dans la memoire du telemetre, elle sera accessible
+            apres redemarrage
         """
         saveConfig(lms, cfg, datacfg, echo)
         return
 
+    # --- START ---
     if args.commande == 'start':
         """
-            Starts continous data aquisition with real-time compression on multiple processes
-            Stops properly when receiving SIGUSR1
+            Demarre l'acquisiton de donnees avec compression en temps reel
+            Le processus s'arrete proprement en recevant un signal SIGUSR1
         """
-        # load config to device
+        # charge la config dans le telemetre
         saveConfig(lms, cfg, datacfg, echo)
-        # saves process pid to file
+        # Enregistre le pid de ce processus dans un fichier pour l'arreter plus tard
+        # avec les commandes start et stop
         with open('pid', 'w') as fic:
             fic.write(str(os.getpid()))
             fic.close()
 
-        # wait for scanner to be ready
+        # attend que le telemetre soit pret a mesurer
         while lms.queryStatus() < 7:
             time.sleep(0.5)
 
-        lms.scanContinous(1) # starts LMS continous data acquisition
-        while not STOP: # global running flag
-            q = multiprocessing.Queue()
-            p = multiprocessing.Process(target=makeLZMA, args=(q,))
+        lms.scanContinous(1) # demarre l'acquisition de donnees continue
+        while not STOP: # le flag STOP permet d'arreter proprement l'acquisition
+            q = multiprocessing.Queue() # dans q seront ajoutees les trames recues
+            p = multiprocessing.Process(target=makeLZMA, args=(q,)) # processus de compression
             p.start()
-            logging.debug('Spawning new process with pid %s', p.pid)
-            for _ in range(args.size): # will send size elements to compression process
-                dat = lms.getScanData(0.1)
+            logging.debug("Demarrage d'un nouveau processus avec le PID %s", p.pid)
+            for _ in range(args.size): # le processus de compression recevra size elements
+                dat = lms.getScanData(0.1) # lis une trame
                 if dat is not None:
-                    q.put(dat)
-            q.put(None) # tell compression process that no more data is coming
-            q.close()
-            multiprocessing.active_children() # force close terminated processes
+                    q.put(dat) # ajoute la trame dans la file partagee avec le processus de compression
+            q.put(None) # indique au processus de compression qu'aucune donnee supplementaire n'arrivera
+            q.close() # ferme le tube de communication
+            multiprocessing.active_children() # force l'arret des processus fils termines
 
-        lms.scanContinous(0) # stops LMS continous data acquisition
+        lms.scanContinous(0) # arrete l'acquisition continue de donnees
         lms.stopMeas()
-        logging.info('Main process terminated')
+        # attend que les processus fils aient termine
+        while len(multiprocessing.active_children()) > 0:
+            pass
+        return
+        logging.info('Processus principal termine')
         return
 
 if __name__ == '__main__':
     logging.basicConfig(filename=os.path.join(os.path.dirname(__file__),\
         'lms.log'), level=logging.DEBUG)
-    logging.info('%s starting logging', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
+    logging.info('===== %s Debut du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
     main()
-    logging.info('%s ending logging', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
+    logging.info('===== %s Fin du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))

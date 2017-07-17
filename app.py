@@ -1,3 +1,9 @@
+"""
+    Application Flask fournissant l'interface web
+    voir la doc de Flask et des modules flask_login et flask_wtf
+"""
+
+
 import configparser
 import subprocess
 import multiprocessing
@@ -8,26 +14,26 @@ from flask import Flask, render_template, redirect, url_for
 from forms import UsernamePasswordForm, ScannerConfigForm
 
 """
-    GLOBALS
+    VARIABLES GLOBALES
 """
 app = Flask(__name__)
 app.config.from_object('config')
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 
-# user database
+# base de donnees d'utilisateurs
 user_db = {'admin': {'pw': 'admin'}, 'operateur': {'pw': 'op'}}
-# default connection properties
+# parametres de connexion par defaut
 ip = '192.168.1.12'
 port = '2111'
-
+# etat de la connexion
 status_info = {'connexion_status': '',\
-    'status_code': '',\
-    'storage': ''}
+                'status_code': '',\
+                'storage': ''}
 events = deque(maxlen=12)
 
 """
-    USER MANAGEMENT
+    GESTION DES UTILISATEURS
 """
 class User(flask_login.UserMixin):
     def __init__(self):
@@ -67,12 +73,12 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = UsernamePasswordForm()
-    if form.validate_on_submit():
+    if form.validate_on_submit(): # si on renvoie le formulaire rempli
         username = form.username.data
-        if username not in user_db:
+        if username not in user_db: # si l'utilisateur est dans la base d'utilisateurs
             return render_template('login.html', form=form, badlogin=True)
 
-        if form.password.data == user_db[username]['pw']:
+        if form.password.data == user_db[username]['pw']: # si le mot de passe est bon
             user = User()
             user.id = username
             flask_login.login_user(user)
@@ -98,6 +104,7 @@ def config():
     form = ScannerConfigForm()
     if form.validate_on_submit():
         cfg = configparser.ConfigParser()
+        # les valeurs codees en dur sont les valeurs qui ne changeront pas (inutiles)
         cfg['DEFAULT'] = {'scaningFrequency': form.frequency.data,\
             'angleResolution': form.resolution.data,\
             'startAngle': -50000,\
@@ -112,6 +119,7 @@ def config():
             'echoFilter': form.echo.data,\
             'event': 1 if form.event.data else 0}
 
+        # enregistre la config dans un fichier, elle sera chargee au demarrage du telemetre
         with open('lms/config.ini', 'w') as cfgfile:
             cfg.write(cfgfile)
 
@@ -122,14 +130,11 @@ def config():
 @app.route('/test', methods=['GET', 'POST'])
 @flask_login.login_required
 def test():
-    """
-        Test connection to LMS
-    """
-    print('test')
+    # lance l'outil scanner et pipe sa sortie sur rep
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'test'],\
         stdout=subprocess.PIPE)
-    msg = rep.communicate()[0].decode()
-    status_info['connexion_status'] = msg
+    msg = rep.communicate()[0].decode() # lis le stdout de l'outil scanner dans msg
+    status_info['connexion_status'] = msg # met a jour les infos de connexion
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - TEST: ' +\
         msg)
     return redirect(url_for('dash'))
@@ -137,14 +142,11 @@ def test():
 @app.route('/status', methods=['GET', 'POST'])
 @flask_login.login_required
 def status():
-    """
-        Query LMS' status
-    """
-    print('status')
+    # lance l'outil scanner et pipe sa sortie sur rep
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'status'],\
         stdout=subprocess.PIPE)
-    msg = rep.communicate()[0].decode()
-    status_info['status_code'] = msg
+    msg = rep.communicate()[0].decode() # lis le stdout de l'outil scanner dans msg
+    status_info['status_code'] = msg # met a jour les infos de connexion
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - STATUS: ' +\
         msg)
     return redirect(url_for('dash'))
@@ -152,7 +154,7 @@ def status():
 @app.route('/start', methods=['GET', 'POST'])
 @flask_login.login_required
 def start():
-    print('start')
+    # lance l'outil scanner sur un procesus separe (start est bloquant)
     multiprocessing.Process(target=pstart).start()
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - START: ')
     return redirect(url_for('dash'))
@@ -164,31 +166,31 @@ def pstart():
 @app.route('/stop', methods=['GET', 'POST'])
 @flask_login.login_required
 def stop():
-    print('stop')
+    # lance l'outil scanner et pipe sa sortie sur rep
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'stop'],\
         stdout=subprocess.PIPE)
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - STOP: ' +\
-        rep.communicate()[0].decode())
+        rep.communicate()[0].decode()) # lis le stdout de l'outil scan et l'ajoute a la file d'evenements
     return redirect(url_for('dash'))
 
 @app.route('/crash', methods=['GET', 'POST'])
 @flask_login.login_required
 def crash():
-    print('crash')
+    # lance l'outil scanner et pipe sa sortie sur rep
     rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'crash'],\
         stdout=subprocess.PIPE)
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - CRASH: ' +\
-        rep.communicate()[0].decode())
+        rep.communicate()[0].decode()) # lis le stdout de l'outil scan et l'ajoute a la file d'evenements
     return redirect(url_for('dash'))
 
 @app.route('/ping', methods=['GET', 'POST'])
 @flask_login.login_required
 def ping():
     """
-        Pings eth0's broadcast IP and assigns responding IP to ip global
+        Ping l'adresse de broadcast de l'interface eth0 et assigne l'IP de la premiere
+        reponse a la variable globale ip
     """
-    print('ping')
-    # get eth0's broadcast IP address
+    # recupere l'adresse de broadcast d'eth0
     rep = subprocess.Popen('ip addr|grep eth0|grep brd', shell=True, stdout=subprocess.PIPE)
     brd = rep.communicate()[0].decode()
     if brd == '':
@@ -197,12 +199,12 @@ def ping():
         return redirect(url_for('dash'))
     brd = brd.split(' ')[7]
 
-    # ping broadcast address
+    # ping l'adresse de broadcast
     rep = subprocess.Popen(['ping', '-b', brd, '-I', 'eth0', '-c', '1'],\
         shell=False, stdout=subprocess.PIPE)
     rep = rep.communicate()[0].decode()
 
-    # retrieves response's IP
+    # recupere l'adresse IP de la reponse
     if rep.find('ttl') < 0:
         events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) +\
             ' - PING: Aucune réponse, vérifiez la connexion')
@@ -218,7 +220,7 @@ def ping():
 
 def check_storage():
     """
-        Checks /dev/sda1 storage state, updates status_info with fill percentage
+        Verifie l'etat du stockage de /dev/sda1 et affiche le pourcentage utilise
     """
     rep = subprocess.Popen('df -kh /dev/sda1', shell=True, stdout=subprocess.PIPE)
     rep = rep.communicate()[0].decode().split(' ')
@@ -227,7 +229,6 @@ def check_storage():
             global status_info
             status_info['storage'] = elt[0:-1]
             break
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
