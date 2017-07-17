@@ -159,6 +159,7 @@ def main():
         try:
             # tue le processus, brutalement
             os.kill(pid, signal.SIGKILL)
+            os.remove('pid')
         except ProcessLookupError:
             pass
         return
@@ -244,7 +245,8 @@ def main():
 
         # les mesures sont enregistrees dans un dossier separe
         global PATH
-        PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())
+        PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())+'/'
+        os.mkdir(PATH)
 
         lms.scanContinous(1) # demarre l'acquisition de donnees continue
         while not STOP: # le flag STOP permet d'arreter proprement l'acquisition
@@ -260,6 +262,11 @@ def main():
             q.close() # ferme le tube de communication
             multiprocessing.active_children() # force l'arret des processus fils termines
 
+        # indique au dernier processus de s'arreter
+        try:
+            q.put(None)
+        except:
+            pass
         lms.scanContinous(0) # arrete l'acquisition continue de donnees
         lms.stopMeas()
         # attend que les processus fils aient termine
@@ -273,7 +280,7 @@ def main():
         subprocess.Popen(['mv', os.path.join(os.path.dirname(__file__),\
             'log.txt'), PATH+'log.txt'], stdout=subprocess.PIPE)
 
-        PATH = '/media/usb/'
+        os.remove('pid')
         return
 
 if __name__ == '__main__':

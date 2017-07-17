@@ -94,6 +94,7 @@ def logout():
 @flask_login.login_required
 def dash():
     check_storage()
+    isRecording()
     return render_template('dash.html', connexion_status=status_info['connexion_status'],\
         status_code=status_info['status_code'], ip=ip, events=events,\
         storage=status_info['storage'])
@@ -229,6 +230,14 @@ def check_storage():
             global status_info
             status_info['storage'] = elt[0:-1]
             break
+
+def isRecording():
+    """
+        Verifie si un enregistrement est en cours
+    """
+    rep = subprocess.Popen('ps -ef|grep scanner.py', shell=True, stdout=subprocess.PIPE)
+    rep = rep.communicate()[0].decode().split(' ')
+    print(rep[-2])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
