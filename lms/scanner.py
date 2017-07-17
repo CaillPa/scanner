@@ -7,6 +7,7 @@ import gzip
 import os
 import signal
 import multiprocessing
+import subprocess
 from collections import deque
 from LMS5xx import LMS5xx
 from structs import scanCfg, scanDataCfg
@@ -125,6 +126,10 @@ def signalHandler(a, b):
     logging.info("Signal d'arret recu")
 
 def main():
+    logging.basicConfig(filename=os.path.join(os.path.dirname(__file__), 'log.txt'),\
+        level=logging.DEBUG)
+    logging.info('===== %s Debut du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
+    
     # --- PARSING DES ARGUMENTS ---
     parser = argparse.ArgumentParser(description='LMS5xx CLI tool')
     parser.add_argument('-i', '--ip', default='192.168.1.12', help='Adresse IP du telemetre')
@@ -176,6 +181,8 @@ def main():
             os.kill(pid, signal.SIGUSR1)
         except ProcessLookupError:
             pass
+
+        return
 
     # toutes les autres commandes necessitent de se connecter au telemetre
     lms = LMS5xx()
@@ -235,6 +242,10 @@ def main():
         while lms.queryStatus() < 7:
             time.sleep(0.5)
 
+        # les mesures sont enregistrees dans un dossier separe
+        global PATH
+        PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())
+
         lms.scanContinous(1) # demarre l'acquisition de donnees continue
         while not STOP: # le flag STOP permet d'arreter proprement l'acquisition
             q = multiprocessing.Queue() # dans q seront ajoutees les trames recues
@@ -254,13 +265,16 @@ def main():
         # attend que les processus fils aient termine
         while len(multiprocessing.active_children()) > 0:
             pass
-        return
         logging.info('Processus principal termine')
+
+        logging.info('===== %s Fin du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
+
+        # deplace les logs dans le dossier contenant les mesures
+        subprocess.Popen(['mv', os.path.join(os.path.dirname(__file__),\
+            'log.txt'), PATH+'log.txt'], stdout=subprocess.PIPE)
+
+        PATH = '/media/usb/'
         return
 
 if __name__ == '__main__':
-    logging.basicConfig(filename=os.path.join(os.path.dirname(__file__),\
-        'lms.log'), level=logging.DEBUG)
-    logging.info('===== %s Debut du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
     main()
-    logging.info('===== %s Fin du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
