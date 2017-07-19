@@ -7,8 +7,23 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        <!-- JQuery -->
+        <script src="{{ url_for('static', filename='jquery/jquery.min.js') }}"></script>
+        <!-- Bootstrap JS -->
+        <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+
         <script type="text/javascript">
             var $SCRIPT_ROOT = {{ request.script_root|tojson | safe }};
+
+            $(function() {
+                $(document).ready(function() {
+                    $.getJSON($SCRIPT_ROOT + '/_date', {
+                        a: Date().toString()
+                    }, function() {
+                        });
+                    return false;
+                });
+            });
         </script>
 
         <!-- Bootstrap CSS -->
@@ -20,11 +35,6 @@
         <div class="container-fluid">
             {% block body %} {% endblock %}
         </div>
-
-        <!-- JQuery -->
-        <script src="{{ url_for('static', filename='jquery/jquery.min.js') }}"></script>
-        <!-- Bootstrap JS -->
-        <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
     </body>
 
     </html>

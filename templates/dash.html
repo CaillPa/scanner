@@ -51,6 +51,16 @@
 								</div>
 								<div class="col-md-1"></div>
 								<div class="col-md-7">
+									{% if rec %}
+									<div class="alert alert-danger">
+										Enregistrement en cours
+									</div>
+									{% endif %}
+									{% if not rec %}
+									<div class="alert alert-info">
+										Enregistrement arreté
+									</div>
+									{% endif %}
 									<h3>Evenements récents</h3>
 									<div class="well well-sm">
 										<ul>
@@ -125,7 +135,7 @@
 								<div class="row">
 									<div class="col-md-4">
 										<form action="/start" method="post">
-											<button type="submit" id="start" class="btn btn-success btn-lg btn-block">Démarrer</button>
+											<button type="submit" id="start" class="btn btn-success btn-lg btn-block"{% if rec %} disabled {% endif %}>Démarrer</button>
 										</form>
 										<form action="/stop" method="post">
 											<button id="stop" class="btn btn-warning btn-lg btn-block">Arrêter</button>

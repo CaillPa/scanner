@@ -8,9 +8,10 @@ import configparser
 import subprocess
 import multiprocessing
 import time
+import os
 from collections import deque
 import flask_login
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, request
 from forms import UsernamePasswordForm, ScannerConfigForm
 
 """
@@ -29,8 +30,12 @@ port = '2111'
 # etat de la connexion
 status_info = {'connexion_status': '',\
                 'status_code': '',\
-                'storage': ''}
+                'storage': '',
+                'recording': False}
 events = deque(maxlen=12)
+
+# pour les chemins relatifs quand on lance le script depuis un autre dossier
+PATH = os.path.dirname(__file__)
 
 """
     GESTION DES UTILISATEURS
@@ -94,10 +99,10 @@ def logout():
 @flask_login.login_required
 def dash():
     check_storage()
-    isRecording()
+    status_info['recording'] = isRecording()
     return render_template('dash.html', connexion_status=status_info['connexion_status'],\
         status_code=status_info['status_code'], ip=ip, events=events,\
-        storage=status_info['storage'])
+        storage=status_info['storage'], rec=status_info['recording'])
 
 @app.route('/config', methods=['GET', 'POST'])
 @flask_login.login_required
@@ -121,7 +126,7 @@ def config():
             'event': 1 if form.event.data else 0}
 
         # enregistre la config dans un fichier, elle sera chargee au demarrage du telemetre
-        with open('lms/config.ini', 'w') as cfgfile:
+        with open(PATH+'/lms/config.ini', 'w') as cfgfile:
             cfg.write(cfgfile)
 
         return redirect(url_for('dash'))
@@ -132,7 +137,7 @@ def config():
 @flask_login.login_required
 def test():
     # lance l'outil scanner et pipe sa sortie sur rep
-    rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'test'],\
+    rep = subprocess.Popen(['python3', PATH+'/lms/scanner.py', '-i', ip, '-p', port, 'test'],\
         stdout=subprocess.PIPE)
     msg = rep.communicate()[0].decode() # lis le stdout de l'outil scanner dans msg
     status_info['connexion_status'] = msg # met a jour les infos de connexion
@@ -144,7 +149,7 @@ def test():
 @flask_login.login_required
 def status():
     # lance l'outil scanner et pipe sa sortie sur rep
-    rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'status'],\
+    rep = subprocess.Popen(['python3', PATH+'/lms/scanner.py', '-i', ip, '-p', port, 'status'],\
         stdout=subprocess.PIPE)
     msg = rep.communicate()[0].decode() # lis le stdout de l'outil scanner dans msg
     status_info['status_code'] = msg # met a jour les infos de connexion
@@ -161,7 +166,7 @@ def start():
     return redirect(url_for('dash'))
 
 def pstart():
-    subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'start'],\
+    subprocess.Popen(['python3', PATH+'/lms/scanner.py', '-i', ip, '-p', port, 'start'],\
         stdout=subprocess.PIPE)
 
 @app.route('/stop', methods=['GET', 'POST'])
@@ -178,7 +183,7 @@ def stop():
 @flask_login.login_required
 def crash():
     # lance l'outil scanner et pipe sa sortie sur rep
-    rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'crash'],\
+    rep = subprocess.Popen(['python3', PATH+'/lms/scanner.py', '-i', ip, '-p', port, 'crash'],\
         stdout=subprocess.PIPE)
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - CRASH: ' +\
         rep.communicate()[0].decode()) # lis le stdout de l'outil scan et l'ajoute a la file d'evenements
@@ -219,6 +224,15 @@ def ping():
             ' - PING: Réponse reçue de ' + ip)
     return redirect(url_for('dash'))
 
+@app.route('/_date', methods=['GET', 'POST'])
+def _date():
+    date = request.args.get('a', 0)
+    
+    cmd = "sudo date --set='"+date+"'"
+    print(cmd)
+    subprocess.Popen(cmd, shell=True)
+    return redirect(url_for('dash'))
+
 def check_storage():
     """
         Verifie l'etat du stockage de /dev/sda1 et affiche le pourcentage utilise
@@ -236,8 +250,11 @@ def isRecording():
         Verifie si un enregistrement est en cours
     """
     rep = subprocess.Popen('ps -ef|grep scanner.py', shell=True, stdout=subprocess.PIPE)
-    rep = rep.communicate()[0].decode().split(' ')
-    print(rep[-2])
+    rep = rep.communicate()[0].decode()
+    if 'python3' in rep.split():
+        return 'yes'
+    else:
+        return None
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
