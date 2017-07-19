@@ -23,7 +23,7 @@
 						<div class="panel-body" style="padding-left: 2em;padding-right: 2em;">
 							<div class="row">
 								<div class="col-md-4">
-									<h3>Etat de la connection : </h3>
+									<h3>Etat de la connexion : </h3>
 									<div class="well well-sm">{{ connexion_status }}</div>
 									<h3>Adresse IP du télémetre : </h3>
 									<div class="well well-sm">{{ ip }}</div>
@@ -133,7 +133,7 @@
 							</div>
 							<div class="col-lg-5">
 								<div class="row">
-									<div class="col-md-4">
+									<div class="col-md-5">
 										<form action="/start" method="post">
 											<button type="submit" id="start" class="btn btn-success btn-lg btn-block"{% if rec %} disabled {% endif %}>Démarrer</button>
 										</form>
@@ -144,7 +144,7 @@
 											<button id="crash" class="btn btn-danger btn-lg btn-block">Crash</button>
 										</form>
 									</div>
-									<div class="col-md-8"></div>
+									<div class="col-md-7"></div>
 								</div>
 								<!-- /row -->
 								<p class="help-block">Arrêter peut prendre quelques minutes, crash fait perdre les dernières minutes mais s'arrete tout de suite</p>

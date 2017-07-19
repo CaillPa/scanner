@@ -134,7 +134,7 @@ def main():
     parser = argparse.ArgumentParser(description='LMS5xx CLI tool')
     parser.add_argument('-i', '--ip', default='192.168.1.12', help='Adresse IP du telemetre')
     parser.add_argument('-p', '--port', default='2111', type=int, help='Port du telemetre')
-    parser.add_argument('-s', '--size', default='10000', type=int, help='Nombre de trames par bloc')
+    parser.add_argument('-s', '--size', default='50000', type=int, help='Nombre de trames par bloc')
     parser.add_argument('-l', '--load', default='defaults.ini',\
         help='Charge les reglages depuis un fichier', )
     parser.add_argument('commande', choices=['test', 'start', 'stop', 'save', 'status', 'crash'],\
