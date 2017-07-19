@@ -277,7 +277,7 @@ def main():
         logging.info('===== %s Fin du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
 
         # deplace les logs dans le dossier contenant les mesures
-        subprocess.Popen(['mv', os.path.join(os.path.dirname(__file__),\
+        subprocess.Popen(['sudo', 'mv', os.path.join(os.path.dirname(__file__),\
             'log.txt'), PATH+'log.txt'], stdout=subprocess.PIPE)
 
         os.remove('pid')
