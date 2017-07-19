@@ -173,7 +173,7 @@ def pstart():
 @flask_login.login_required
 def stop():
     # lance l'outil scanner et pipe sa sortie sur rep
-    rep = subprocess.Popen(['python3', 'lms/scanner.py', '-i', ip, '-p', port, 'stop'],\
+    rep = subprocess.Popen(['python3', PATH+'/lms/scanner.py', '-i', ip, '-p', port, 'stop'],\
         stdout=subprocess.PIPE)
     events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - STOP: ' +\
         rep.communicate()[0].decode()) # lis le stdout de l'outil scan et l'ajoute a la file d'evenements
