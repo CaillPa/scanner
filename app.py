@@ -226,11 +226,12 @@ def ping():
 
 @app.route('/_date', methods=['GET', 'POST'])
 def _date():
+    """
+        Met a jour l'horloge du serveur selon l'heure du client
+    """
     date = request.args.get('a', 0)
-    
     cmd = "sudo date --set='"+date+"'"
-    print(cmd)
-    subprocess.Popen(cmd, shell=True)
+    subprocess.Popen(cmd, shell=True, stdout=None)
     return redirect(url_for('dash'))
 
 def check_storage():
