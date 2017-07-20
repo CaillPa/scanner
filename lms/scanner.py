@@ -257,6 +257,9 @@ def main():
                 dat = lms.getScanData(0.1) # lis une trame
                 if dat is not None:
                     q.put(dat) # ajoute la trame dans la file partagee avec le processus de compression
+                if STOP:
+                    q.put(None)
+                    break
             q.put(None) # indique au processus de compression qu'aucune donnee supplementaire n'arrivera
             q.close() # ferme le tube de communication
             multiprocessing.active_children() # force l'arret des processus fils termines
