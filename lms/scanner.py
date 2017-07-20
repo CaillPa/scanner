@@ -7,7 +7,6 @@ import gzip
 import os
 import signal
 import multiprocessing
-import subprocess
 from collections import deque
 from LMS5xx import LMS5xx
 from structs import scanCfg, scanDataCfg
@@ -150,7 +149,7 @@ def main():
             Arrete l'acquisition de donnees continue immediatement mais perd des donnees
         """
         try:
-            with open('pid', 'r') as pidfile:
+            with open(os.path.join(os.path.dirname(__file__), 'pid'), 'r') as pidfile:
                 pid = int(pidfile.read())
         except FileNotFoundError:
             print('Fichier PID introuvable, abandon')
@@ -159,7 +158,7 @@ def main():
         try:
             # tue le processus, brutalement
             os.kill(pid, signal.SIGKILL)
-            os.remove('pid')
+            os.remove(os.path.join(os.path.dirname(__file__), 'pid'))
         except ProcessLookupError:
             pass
         return
@@ -171,7 +170,7 @@ def main():
             Attend que les processus de compression soient termines
         """
         try:
-            with open('pid', 'r') as pidfile:
+            with open(os.path.join(os.path.dirname(__file__), 'pid'), 'r') as pidfile:
                 pid = int(pidfile.read())
         except FileNotFoundError:
             print('Fichier PID introuvable, abandon')
@@ -235,7 +234,7 @@ def main():
         saveConfig(lms, cfg, datacfg, echo)
         # Enregistre le pid de ce processus dans un fichier pour l'arreter plus tard
         # avec les commandes start et stop
-        with open('pid', 'w') as fic:
+        with open(os.path.join(os.path.dirname(__file__), 'pid'), 'w') as fic:
             fic.write(str(os.getpid()))
             fic.close()
 
@@ -277,10 +276,12 @@ def main():
         logging.info('===== %s Fin du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
 
         # deplace les logs dans le dossier contenant les mesures
-        subprocess.Popen(['sudo', 'mv', os.path.join(os.path.dirname(__file__),\
-            'log.txt'), PATH+'log.txt'], stdout=subprocess.PIPE)
+        with open(os.path.join(os.path.dirname(__file__), 'log.txt'), 'r') as logs:
+            with open(os.path.join(PATH, 'log.txt'), 'w') as dstlog:
+                dstlog.write(logs.read())
+                os.remove(os.path.join(os.path.dirname(__file__), 'log.txt'))
 
-        os.remove('pid')
+        os.remove(os.path.join(os.path.dirname(__file__), 'pid'))
         return
 
 if __name__ == '__main__':
