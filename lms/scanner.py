@@ -111,7 +111,10 @@ def makeLZMA(q):
 
     # enregistrement dans le fichier
     with lzma.open(path, 'wb') as f:
-        f.write(b''.join(res))
+        try:
+            f.write(b''.join(res))
+        except OSError:
+            logging.critical("Support de stockage plein!")
     logging.info('Fin du processus avec le PID %s', os.getpid())
     return
 

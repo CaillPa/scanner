@@ -1,6 +1,7 @@
 import argparse
 import os
 import lzma
+from collections import deque
 
 def fileList(path):
     """
@@ -24,25 +25,70 @@ def fileList(path):
     valid = list(filter(isValid, files))
     return sorted(valid)
 
-def parseDatagrams(buff, minsize=50):
+def parseDatagrams(buff, echo, RSSI, minsize=100,):
     """
-        retourne la liste ordonnee des datagrames lus dans buff
-        {stx}__minsize bytes__{etx}
+        retourne la liste des trames valides lues dans buff
+        {stx}___minsize bytes__{etx}
+        verifie la presence des balises DISTn et RSSIn selon les parametres
     """
-    res = [] # liste des datagrames valides
-    ETX = 0
-    while ETX != -1: # tant qu'on trouve un octet de fin de trame
-        STX = buff.find(b'\x02')
-        ETX = buff.find(b'\x03')
-        if ETX - STX > minsize:
-            res.append(buff[STX:ETX].decode())
-        buff = buff[ETX+1:]
+    dist = 'DIST'+str(echo)
+
+    res = deque() # liste des trames valides
+    init = buff.split(b'\x03') # decoupe le buffer autours des ETX
+
+    # donnees avec RSSI
+    if RSSI is True:
+        rssi = 'RSSI'+str(echo)
+        for i in init:
+            dat = i.split(b'\x02')[-1].decode() # tramecommencant par un STX le plus pres de l'ETX
+            # verifications d'integrite
+            if len(dat) < minsize:
+                continue
+            if not rssi in dat:
+                continue
+            if not dist in dat:
+                continue
+            res.append(dat)
+        return res
+    # donnees sans RSSI
+    for i in init:
+        dat = i.split(b'\x02')[-1].decode()
+        if len(dat) < minsize:
+            continue
+        if not dist in dat:
+            continue
+        res.append(dat)
     return res
 
-def extract(files, srcdir, dstdir, size):
-    """
-        Extrait le contenu de files en fichier de taille size dans dstdir
-    """
+def main():
+    parser = argparse.ArgumentParser(description="Outil d'extraction des donnees")
+    parser.add_argument('-s', '--size', default='100', type=int,\
+        help='Taille des fichiers en sortie (en Mo)')
+    parser.add_argument('-c', '--count', default='-1', type=int,\
+        help='Nombre de fichiers a decompresser')
+    parser.add_argument('-e', '--echo', default='1', type=int,\
+        help="Nombre d'echos dans les donnees")
+    parser.add_argument('--RSSI', default='False', action='store_true',\
+        help='Extraire les donnees de remission')
+    parser.add_argument('srcdir', nargs=1,\
+        help='Dossier contenant les fichiers compresses')
+    parser.add_argument('dstdir', nargs=1,\
+        help='Dossier dans lequel stocker les fichiers decompresses')
+
+    args = parser.parse_args()
+    srcdir = args.srcdir[0]
+    dstdir = args.dstdir[0]
+    size = args.size
+    # teste si les chemins sont valides
+    if not os.path.isdir(srcdir) or not os.path.isdir(dstdir):
+        print('Veuillez rentrer des chemins de dossier valide')
+        return
+
+    if args.count == -1:
+        files = fileList(srcdir)
+    else:
+        files = fileList(srcdir)[0:args.count]
+
     buff = [] # buffer contenant la liste des trames valides lues
     n = 0 # compteur de fichiers
     for fil in files:
@@ -50,8 +96,7 @@ def extract(files, srcdir, dstdir, size):
         with lzma.open(path) as fic:
             print(path)
             fic = lzma.LZMADecompressor().decompress(fic.read()) # fichier decompresse
-            buff.extend(parseDatagrams(fic))
-            #del fic # libere la memoire asap
+            buff.extend(parseDatagrams(fic, args.echo, args.RSSI))
 
             ## creation des fichiers de taille fixe
             w = len(buff[0]) # longeur en octet d'une trame
@@ -69,28 +114,6 @@ def extract(files, srcdir, dstdir, size):
     with open(filename, 'w') as out:
         out.write('\n'.join(buff[:ind]))
     return
-
-def main():
-    parser = argparse.ArgumentParser(description="Outil d'extraction des donnees")
-    parser.add_argument('-s', '--size', default='100', type=int,\
-        help='Taille des fichiers en sortie (en Mo)')
-    parser.add_argument('-c', '--count', default='10', type=int,\
-        help='Nombre de fichiers a decompresser')
-    parser.add_argument('srcdir', nargs=1,\
-        help='Dossier contenant les fichiers compresses')
-    parser.add_argument('dstdir', nargs=1,\
-        help='Dossier dans lequel stocker les fichiers decompresses')
-
-    args = parser.parse_args()
-    srcdir = args.srcdir[0]
-    dstdir = args.dstdir[0]
-    # teste si les chemins sont valides
-    if not os.path.isdir(srcdir) or not os.path.isdir(dstdir):
-        print('Veuillez rentrer des chemins de dossier valide')
-        return
-
-    files = fileList(srcdir)[0:args.count]
-    extract(files, srcdir, dstdir, 100)
 
 
 if __name__ == '__main__':
