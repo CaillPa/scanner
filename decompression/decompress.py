@@ -84,10 +84,9 @@ def main():
         print('Veuillez rentrer des chemins de dossier valide')
         return
 
-    if args.count == -1:
-        files = fileList(srcdir)
-    else:
-        files = fileList(srcdir)[0:args.count]
+    files = fileList(srcdir)
+    if args.count is not -1:
+        files = files[0:min(args.count, len(files))]
 
     buff = [] # buffer contenant la liste des trames valides lues
     n = 0 # compteur de fichiers
