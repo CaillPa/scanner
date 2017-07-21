@@ -3,8 +3,8 @@ from wtforms import StringField, PasswordField, SelectField, BooleanField, Integ
 from wtforms.validators import DataRequired, NumberRange
 
 class UsernamePasswordForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
+    username = StringField('username', validators=[DataRequired()])
+    password = PasswordField('password', validators=[DataRequired()])
 
 class ScannerConfigForm(FlaskForm):
     frequency = SelectField('Scaning Frequency', choices=[(2500, '25 Hz'), (3500, '35 Hz'),\

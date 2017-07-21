@@ -160,9 +160,13 @@ def status():
 @app.route('/start', methods=['GET', 'POST'])
 @flask_login.login_required
 def start():
-    # lance l'outil scanner sur un procesus separe (start est bloquant)
-    multiprocessing.Process(target=pstart).start()
-    events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - START: ')
+    if not scanner_isavailable():
+        events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) +\
+        ' - START: Telemetre pas encore pret pour acquisition')
+    else:
+        # lance l'outil scanner sur un procesus separe (start est bloquant)
+        multiprocessing.Process(target=pstart).start()
+        events.append(time.strftime('%d/%m/%Y %H:%M:%S', time.localtime()) + ' - START: ')
     return redirect(url_for('dash'))
 
 def pstart():
@@ -233,6 +237,23 @@ def _date():
     cmd = "sudo date --set='"+date+"'"
     subprocess.Popen(cmd, shell=True, stdout=None)
     return redirect(url_for('dash'))
+
+def scanner_isavailable():
+    """
+        verifie que le telemetre est pret a enregistrer
+    """
+    status_info = {'connexion_status': '',\
+                'status_code': '',\
+                'storage': '',
+                'recording': False}
+    if status_info['connexion_status'] is not 'OK':
+        return False
+    if int(status_info['status_code']) < 6:
+        return False
+    if status_info['recording'] is True:
+        return False
+
+    return True
 
 def check_storage():
     """
