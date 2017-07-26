@@ -25,7 +25,7 @@ def fileList(path):
     valid = list(filter(isValid, files))
     return sorted(valid)
 
-def parseDatagrams(buff, echo, RSSI, minsize=100,):
+def parseDatagrams(buff, echo, RSSI, minsize=1000,):
     """
         retourne la liste des trames valides lues dans buff
         {stx}___minsize bytes__{etx}
@@ -40,7 +40,7 @@ def parseDatagrams(buff, echo, RSSI, minsize=100,):
     if RSSI is True:
         rssi = 'RSSI'+str(echo)
         for i in init:
-            dat = i.split(b'\x02')[-1].decode() # tramecommencant par un STX le plus pres de l'ETX
+            dat = i.split(b'\x02')[-1].decode() # trame commencant par un STX le plus pres de l'ETX
             # verifications d'integrite
             if len(dat) < minsize:
                 continue
@@ -48,7 +48,11 @@ def parseDatagrams(buff, echo, RSSI, minsize=100,):
                 continue
             if not dist in dat:
                 continue
+            if not 'LMDscandata' in dat:
+                continue
             res.append(dat)
+        print(min([len(x.split()) for x in res]))
+        print(max([len(x.split()) for x in res]))
         return res
     # donnees sans RSSI
     for i in init:
@@ -57,19 +61,25 @@ def parseDatagrams(buff, echo, RSSI, minsize=100,):
             continue
         if not dist in dat:
             continue
+        if not 'LMDscandata' in dat:
+            continue
         res.append(dat)
+    print(min([len(x.split()) for x in res]))
+    print(max([len(x.split()) for x in res]))
     return res
 
 def main():
-    parser = argparse.ArgumentParser(description="Outil d'extraction des donnees")
+    parser = argparse.ArgumentParser(description="Outil de decompression des donnees")
     parser.add_argument('-s', '--size', default='100', type=int,\
         help='Taille des fichiers en sortie (en Mo)')
-    parser.add_argument('-c', '--count', default='-1', type=int,\
+    parser.add_argument('-c', '--count', default='0', type=int,\
         help='Nombre de fichiers a decompresser')
+    parser.add_argument('-o', '--offset', default='0', type=int,\
+        help='Nombre de fichiers a sauter')
     parser.add_argument('-e', '--echo', default='1', type=int,\
         help="Nombre d'echos dans les donnees")
     parser.add_argument('--RSSI', default='False', action='store_true',\
-        help='Extraire les donnees de remission')
+        help='Verifier la presence des donnees de remission ?')
     parser.add_argument('srcdir', nargs=1,\
         help='Dossier contenant les fichiers compresses')
     parser.add_argument('dstdir', nargs=1,\
@@ -84,9 +94,13 @@ def main():
         print('Veuillez rentrer des chemins de dossier valide')
         return
 
+    # genere la liste des fichiers correspondant aux arguments
     files = fileList(srcdir)
-    if args.count is not -1:
-        files = files[0:min(args.count, len(files))]
+    if args.offset > min(len(files), args.count):
+        print('Mauvais offset! Abandon...')
+        return
+    if args.count is not 0:
+        files = files[args.offset:min(args.offset+args.count, len(files))]
 
     buff = [] # buffer contenant la liste des trames valides lues
     n = 0 # compteur de fichiers
@@ -113,7 +127,6 @@ def main():
     with open(filename, 'w') as out:
         out.write('\n'.join(buff[:ind]))
     return
-
 
 if __name__ == '__main__':
     main()

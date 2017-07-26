@@ -235,6 +235,7 @@ def main():
         """
         # charge la config dans le telemetre
         saveConfig(lms, cfg, datacfg, echo)
+
         # Enregistre le pid de ce processus dans un fichier pour l'arreter plus tard
         # avec les commandes start et stop
         with open(os.path.join(os.path.dirname(__file__), 'pid'), 'w') as fic:
@@ -249,6 +250,11 @@ def main():
         global PATH
         PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())+'/'
         os.mkdir(PATH)
+
+        # copie le fichier de config dans le dossier destination
+        with open(os.path.join(os.path.dirname(__file__), args.load), 'r') as config:
+            with open(os.path.join(PATH, 'config.ini'), 'w') as dstconfig:
+                dstconfig.write(config.read())
 
         lms.scanContinous(1) # demarre l'acquisition de donnees continue
         while not STOP: # le flag STOP permet d'arreter proprement l'acquisition
