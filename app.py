@@ -35,7 +35,8 @@ status_info = {'connexion_status': '',\
 events = deque(maxlen=12)
 
 # pour les chemins relatifs quand on lance le script depuis un autre dossier
-PATH = os.path.dirname(__file__)
+#PATH = os.path.dirname(__file__)
+PATH = '/home/pi/scanner/'
 
 """
     GESTION DES UTILISATEURS
@@ -242,14 +243,11 @@ def scanner_isavailable():
     """
         verifie que le telemetre est pret a enregistrer
     """
-    status_info = {'connexion_status': '',\
-                'status_code': '',\
-                'storage': '',
-                'recording': False}
-    if status_info['connexion_status'] is not 'OK':
+    if 'OK' not in status_info['connexion_status']:
         return False
-    if int(status_info['status_code']) < 6:
-        return False
+    if '6' not in status_info['status_code']:
+        if '7' not in status_info['status_code']:
+            ééreturn False
     if status_info['recording'] is True:
         return False
 
