@@ -247,7 +247,7 @@ def scanner_isavailable():
         return False
     if '6' not in status_info['status_code']:
         if '7' not in status_info['status_code']:
-            ééreturn False
+            return False
     if status_info['recording'] is True:
         return False
 

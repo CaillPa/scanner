@@ -1,6 +1,7 @@
 import argparse
 import os
 import lzma
+import configparser
 from collections import deque
 
 def fileList(path):
@@ -51,8 +52,11 @@ def parseDatagrams(buff, echo, RSSI, minsize=1000,):
             if not 'LMDscandata' in dat:
                 continue
             res.append(dat)
-        print(min([len(x.split()) for x in res]))
-        print(max([len(x.split()) for x in res]))
+        mini = min([len(x.split()) for x in res])
+        maxi = max([len(x.split()) for x in res])
+        if mini != maxi:
+            print(mini)
+            print(maxi)
         return res
     # donnees sans RSSI
     for i in init:
@@ -64,13 +68,12 @@ def parseDatagrams(buff, echo, RSSI, minsize=1000,):
         if not 'LMDscandata' in dat:
             continue
         res.append(dat)
-        
+
     mini = min([len(x.split()) for x in res])
     maxi = max([len(x.split()) for x in res])
     if mini != maxi:
         print(mini)
         print(maxi)
-        
     return res
 
 def main():
@@ -107,8 +110,13 @@ def main():
     if args.count is not 0:
         files = files[args.offset:min(args.offset+args.count, len(files))]
 
+    with open(os.path.join(srcdir, 'config.ini'), 'r') as srcconf:
+        with open(os.path.join(dstdir, 'config.ini'), 'w') as dstconf:
+            dstconf.write(srcconf.read())
+
     buff = [] # buffer contenant la liste des trames valides lues
     n = 0 # compteur de fichiers
+    ind = -1 # dans le cas ou on fait un seul fichier plus petit que size
     for fil in files:
         path = os.path.join(srcdir, fil) # chemin complet du fichier courant
         with lzma.open(path) as fic:
