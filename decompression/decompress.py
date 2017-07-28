@@ -64,8 +64,13 @@ def parseDatagrams(buff, echo, RSSI, minsize=1000,):
         if not 'LMDscandata' in dat:
             continue
         res.append(dat)
-    print(min([len(x.split()) for x in res]))
-    print(max([len(x.split()) for x in res]))
+        
+    mini = min([len(x.split()) for x in res])
+    maxi = max([len(x.split()) for x in res])
+    if mini != maxi:
+        print(mini)
+        print(maxi)
+        
     return res
 
 def main():

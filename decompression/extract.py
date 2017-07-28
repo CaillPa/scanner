@@ -2,10 +2,11 @@ import argparse
 import os
 import re
 import csv
-#import cProfile
-import multiprocessing
-import sys
-from itertools import repeat
+import cProfile
+#import multiprocessing
+#import sys
+#from itertools import repeat
+from collections import deque
 import pandas as pd
 
 def fileList(path):
@@ -45,13 +46,26 @@ def fileList(path):
 
 def convert(element):
     """
-        Convertis un element d'un trame depuis sa representation hexa vers
+        Convertis un element d'une trame depuis sa representation hexa vers
         sa representation decimale. Les string ne sont pas modifiees
     """
     try:
         return int(element, 16)
     except ValueError:
         return element
+
+def convertIter(elements):
+    """
+        Convertis une liste d'element d'une trame depuis sa representation hexa
+        vers sa representation decimale. Les string ne sont pas modifiees
+    """
+    res = deque()
+    for elem in elements:
+        try:
+            res.append(int(elem, 16))
+        except ValueError:
+            res.append(elem)
+    return res
 
 def makeDate(year, month, day, hour, minute, second=0, usec=0):
     """
@@ -106,6 +120,35 @@ def convertFile(filename, srcdir, dstdir, used, flag_date):
                 csvwriter = csv.writer(outfile, delimiter=',')
                 csvwriter.writerows(data)
                 del data
+        print(filename)
+    return
+
+def convertFile2(filename, srcdir, dstdir, used, flag_date):
+    """
+        Converti le fichier filename present dans srcdir contenant les trames brutes
+        en fichier csv stocke dans dstdir
+    """
+    with open(os.path.join(srcdir, filename), 'r') as fil:
+        print('convert entree')
+        data = deque()
+        if flag_date is True: # si on veut la date
+            for line in fil:
+                tok = line.split()
+                del line
+                date = convertIter(tok[-8:-1])
+                data.append(date+convertIter([tok[i] for i in used]))
+
+        else: # si on veut pas la date
+            for line in fil:
+                tok = line.split()
+                del line
+                data.append(convertIter([tok[i] for i in used]))
+
+        print('convert fin boucle')
+        with open(os.path.join(dstdir, filename.split('.txt')[0]+'.csv'), 'w') as outfile:
+            csvwriter = csv.writer(outfile, delimiter=',')
+            csvwriter.writerows(data)
+            del data
         print(filename)
     return
 
@@ -191,11 +234,16 @@ def main():
         del indices
         del nbmeas
 
+    """     Pool de workers qui fait planter mon PC :(
     # liste d'iterables contenant les arguments de convertFile() pour la pool
     pool_args = [[x,] + y for x, y in zip(files, repeat([srcdir, dstdir, used, args.date]))]
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         pool.starmap(convertFile, pool_args)
+    """
+
+    for file in files:
+        convertFile2(file, srcdir, dstdir, used, args.date)
     
 if __name__ == '__main__':
-    main()
-    #cProfile.run('main()')
+    #main()
+    cProfile.run('main()')
