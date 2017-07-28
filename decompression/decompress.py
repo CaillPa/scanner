@@ -55,8 +55,7 @@ def parseDatagrams(buff, echo, RSSI, minsize=1000,):
         mini = min([len(x.split()) for x in res])
         maxi = max([len(x.split()) for x in res])
         if mini != maxi:
-            print(mini)
-            print(maxi)
+            print('Erreur détectée dans le fichier de sortie suivant')
         return res
     # donnees sans RSSI
     for i in init:
@@ -72,8 +71,7 @@ def parseDatagrams(buff, echo, RSSI, minsize=1000,):
     mini = min([len(x.split()) for x in res])
     maxi = max([len(x.split()) for x in res])
     if mini != maxi:
-        print(mini)
-        print(maxi)
+        print('Erreur détectée dans le fichier de sortie suivant')
     return res
 
 def main():
@@ -104,8 +102,8 @@ def main():
 
     # genere la liste des fichiers correspondant aux arguments
     files = fileList(srcdir)
-    if args.offset > min(len(files), args.count):
-        print('Mauvais offset! Abandon...')
+    if args.offset + args.count > len(files):
+        print('Mauvaise combinaison offset/nb de fichiers! Abandon...')
         return
     if args.count is not 0:
         files = files[args.offset:min(args.offset+args.count, len(files))]
