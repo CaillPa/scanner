@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SelectField, BooleanField, IntegerField
+from wtforms import StringField, PasswordField, SelectField, BooleanField, IntegerField, TextAreaField, DateTimeField
 from wtforms.validators import DataRequired, NumberRange
 
 class UsernamePasswordForm(FlaskForm):
@@ -18,3 +18,8 @@ class ScannerConfigForm(FlaskForm):
     remission = BooleanField('Remission', default='checked')
     interval = IntegerField('Output Interval', validators=[DataRequired(),\
         NumberRange(min=1, max=50000)])
+
+class DataInfoForm(FlaskForm):
+    project = StringField('project', validators=None)
+    description = TextAreaField('description', validators=None)
+    location = StringField('location', validators=None)

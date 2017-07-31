@@ -12,7 +12,7 @@ import os
 from collections import deque
 import flask_login
 from flask import Flask, render_template, redirect, url_for, request
-from forms import UsernamePasswordForm, ScannerConfigForm
+from forms import UsernamePasswordForm, ScannerConfigForm, DataInfoForm
 
 """
     VARIABLES GLOBALES
@@ -133,6 +133,21 @@ def config():
         return redirect(url_for('dash'))
 
     return render_template('config.html', form=form)
+
+@app.route('/info', methods=['GET', 'POST'])
+@flask_login.login_required
+def info():
+    """
+        Ecriture des infos sur l'enregistrement dans un fichier temporaire
+    """
+    form = DataInfoForm()
+    if form.validate_on_submit():
+        with open(PATH+'info.txt', 'w') as infos:
+            infos.write(form.project+'\n')
+            infos.write(form.location+'\n')
+            infos.write(form.description+'\n')
+        return redirect(url_for('dash'))
+    return render_template('info.html', form=form)
 
 @app.route('/test', methods=['GET', 'POST'])
 @flask_login.login_required

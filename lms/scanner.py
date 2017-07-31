@@ -7,6 +7,7 @@ import gzip
 import os
 import signal
 import multiprocessing
+from shutil import move
 from collections import deque
 from LMS5xx import LMS5xx
 from structs import scanCfg, scanDataCfg
@@ -129,7 +130,7 @@ def signalHandler(a, b):
 
 def main():
     logging.basicConfig(filename=os.path.join(os.path.dirname(__file__), 'log.txt'),\
-        level=logging.DEBUG)
+        level=logging.INFO)
     logging.info('===== %s Debut du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
     
     # --- PARSING DES ARGUMENTS ---
@@ -246,6 +247,12 @@ def main():
         while lms.queryStatus() < 7:
             time.sleep(0.5)
 
+        # recopie du fichier d'info dans le repertoire destination
+        with open(os.path.join(os.path.dirname(__file__), 'info.txt'), 'w') as fic:
+            fic.write("Debut d'enregistrement: "+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+'\n')
+            with open(os.path.join(os.path.dirname(__file__), 'info.txt'), 'r') as infos:
+                fic.write(infos.read())
+
         # les mesures sont enregistrees dans un dossier separe
         global PATH
         PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())+'/'
@@ -293,7 +300,11 @@ def main():
                 dstlog.write(logs.read())
                 os.remove(os.path.join(os.path.dirname(__file__), 'log.txt'))
 
+        with open(os.path.join(os.path.dirname(__file__), 'info.txt'), 'w') as fic:
+            fic.write("Fin d'enregistrement: "+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+'\n')
+
         os.remove(os.path.join(os.path.dirname(__file__), 'pid'))
+        os.remove(os.path.join(os.path.dirname(__file__), 'log.txt'))
         return
 
 if __name__ == '__main__':

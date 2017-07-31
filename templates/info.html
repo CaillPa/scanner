@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block title %}Configuration{% endblock title %}
+{% block body %}
+<div id="wrapper">
+  <div id="page-wrapper">
+    <div class="row">
+      <div class="col-md-3"></div>
+      <div class="col-md-6">
+        <form action="" method="post">
+          <div class="row">
+            <h1 class="page-header">Informations sur les données</h1>
+          </div>
+          <div class="row">
+            <div class="panel panel-primary">
+              <div class="panel-heading">
+                Informations sur l'enregistrement
+              </div>
+              <div class="panel-body">
+                <div class="form-group">
+                  <label>Nom du projet</label>
+                    {{ form.project(class_='form-control') }}
+                  <p class="help-block">Dans quel contexte est fait cet enregistrement</p>
+                  <label>Lieu</label>
+                    {{ form.location(class_='form-control') }}
+                  <p class="help-block">Lieu d'enregistrement</p>
+                  <label>Description</label>
+                    {{ form.description(class_='form-control') }}
+                  <p class="help-block">Info. supplémentaires sur l'enregistrement</p>
+
+                  {{ form.csrf_token }}
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <input type="submit" class="btn btn-success btn-lg" value="Envoyer">
+                    <button onclick="self.location.href='/dash'" type="button" class="btn btn-warning btn-lg">Annuler</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="col-md-3"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock body %}
