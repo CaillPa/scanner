@@ -143,9 +143,9 @@ def info():
     form = DataInfoForm()
     if form.validate_on_submit():
         with open(PATH+'info.txt', 'w') as infos:
-            infos.write(form.project+'\n')
-            infos.write(form.location+'\n')
-            infos.write(form.description+'\n')
+            infos.write(form.project.data+'\n')
+            infos.write(form.location.data+'\n')
+            infos.write(form.description.data+'\n')
         return redirect(url_for('dash'))
     return render_template('info.html', form=form)
 
@@ -186,7 +186,7 @@ def start():
     return redirect(url_for('dash'))
 
 def pstart():
-    subprocess.Popen(['python3', PATH+'/lms/scanner.py', '-i', ip, '-p', port, 'start'],\
+    subprocess.Popen(['python3', PATH+'/lms/scanner.py', '-i', ip, '-p', port, '-l', 'config.ini', 'start'],\
         stdout=subprocess.PIPE)
 
 @app.route('/stop', methods=['GET', 'POST'])

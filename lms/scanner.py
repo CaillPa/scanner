@@ -137,7 +137,7 @@ def main():
     parser = argparse.ArgumentParser(description='LMS5xx CLI tool')
     parser.add_argument('-i', '--ip', default='192.168.1.12', help='Adresse IP du telemetre')
     parser.add_argument('-p', '--port', default='2111', type=int, help='Port du telemetre')
-    parser.add_argument('-s', '--size', default='50000', type=int, help='Nombre de trames par bloc')
+    parser.add_argument('-s', '--size', default='200000', type=int, help='Nombre de trames par bloc')
     parser.add_argument('-l', '--load', default='defaults.ini',\
         help='Charge les reglages depuis un fichier', )
     parser.add_argument('commande', choices=['test', 'start', 'stop', 'save', 'status', 'crash'],\
@@ -247,16 +247,19 @@ def main():
         while lms.queryStatus() < 7:
             time.sleep(0.5)
 
-        # recopie du fichier d'info dans le repertoire destination
-        with open(os.path.join(os.path.dirname(__file__), 'info.txt'), 'w') as fic:
-            fic.write("Debut d'enregistrement: "+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+'\n')
-            with open(os.path.join(os.path.dirname(__file__), 'info.txt'), 'r') as infos:
-                fic.write(infos.read())
+        # lecture fichier info
+        with open(os.path.join(os.path.dirname(__file__), '../info.txt'), 'r') as fic:
+            buff = fic.read()
 
         # les mesures sont enregistrees dans un dossier separe
         global PATH
         PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())+'/'
         os.mkdir(PATH)
+
+        # ecriture debut fichier info
+        with open(os.path.join(PATH, 'info.txt'), 'w') as fic:
+            fic.write("Debut d'enregistrement: "+time.strftime("%Y%m%d%H%M%S", time.localtime())+'\n')
+            fic.write(buff)
 
         # copie le fichier de config dans le dossier destination
         with open(os.path.join(os.path.dirname(__file__), args.load), 'r') as config:
@@ -300,11 +303,10 @@ def main():
                 dstlog.write(logs.read())
                 os.remove(os.path.join(os.path.dirname(__file__), 'log.txt'))
 
-        with open(os.path.join(os.path.dirname(__file__), 'info.txt'), 'w') as fic:
-            fic.write("Fin d'enregistrement: "+time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())+'\n')
+        with open(os.path.join(PATH, 'info.txt'), 'a') as fic:
+            fic.write("Fin d'enregistrement: "+time.strftime("%Y%m%d%H%M%S", time.localtime())+'\n')
 
         os.remove(os.path.join(os.path.dirname(__file__), 'pid'))
-        os.remove(os.path.join(os.path.dirname(__file__), 'log.txt'))
         return
 
 if __name__ == '__main__':
