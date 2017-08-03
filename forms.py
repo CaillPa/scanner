@@ -7,11 +7,10 @@ class UsernamePasswordForm(FlaskForm):
     password = PasswordField('password', validators=[DataRequired()])
 
 class ScannerConfigForm(FlaskForm):
-    frequency = SelectField('Scaning Frequency', choices=[(2500, '25 Hz'), (3500, '35 Hz'),\
-        (5000, '50 Hz'), (7500, '75 Hz'), (10000, '100 Hz')], coerce=int)
+    frequency = SelectField('Scaning Frequency', choices=[(2500, '25 Hz'),\
+        (5000, '50 Hz'), (10000, '100 Hz')], coerce=int)
     resolution = SelectField('Angular Resolution', choices=[(1667, '0.1667°'),\
-        (2500, '0.25°'), (3333, '0.3333°'), (5000, '0.5°'), (6667, '0.6667°'),\
-        (10000, '1°')], coerce=int)
+        (2500, '0.25°'), (6667, '0.6667°'), (10000, '1°')], coerce=int)
     echo = SelectField('Echo', choices=[(0, 'Premier echo'), (1, 'Tous les echo'),\
         (2, 'Dernier echo')], coerce=int)
     event = BooleanField('Event', default='checked')

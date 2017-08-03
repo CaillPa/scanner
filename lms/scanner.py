@@ -7,6 +7,7 @@ import gzip
 import os
 import signal
 import multiprocessing
+from logging.handlers import RotatingFileHandler
 from shutil import move
 from collections import deque
 from LMS5xx import LMS5xx
@@ -18,6 +19,9 @@ STOP = False
 # chemin d'enregistrement des donnees
 PATH = '/media/usb/'
 
+# chemin du fichier de config
+CONFIGPATH = '/home/pi/scanner/lms'
+
 def loadConfig(filename):
     """
         Charge la config stockee dans filename et retourne les structures adequates
@@ -26,10 +30,10 @@ def loadConfig(filename):
         @return structure scanCfg, structure scanDataCfg, entier
     """
     config = configparser.ConfigParser()
-    config.read(filename)
+    config.read(os.path.join(CONFIGPATH, filename))
     config = config['DEFAULT']
     defaults = configparser.ConfigParser()
-    defaults.read(os.path.join(os.path.dirname(__file__), 'defaults.ini'))
+    defaults.read(os.path.join(CONFIGPATH, 'defaults.ini'))
     defaults = defaults['DEFAULT']
 
     cfg = scanCfg()
@@ -62,11 +66,13 @@ def saveConfig(lms, cfg, datacfg, echo):
     """
     lms.login()
     lms.setTime()
-    lms.setScanCfg(cfg)
-    lms.setScanDataCfg(datacfg)
+    retscan = lms.setScanCfg(cfg)
+    retscandata = lms.setScanDataCfg(datacfg)
     lms.setEchoFilter(echo)
     lms.saveConfig()
     lms.startDevice()
+
+    return (retscan, retscandata)
 
 def saveTxt(q):
     """
@@ -129,15 +135,22 @@ def signalHandler(a, b):
     logging.info("Signal d'arret recu")
 
 def main():
-    logging.basicConfig(filename=os.path.join(os.path.dirname(__file__), 'log.txt'),\
-        level=logging.INFO)
-    logging.info('===== %s Debut du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
+    # --- PARAMETRAGE DU LOGGER ---
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
+    file_handler = RotatingFileHandler(os.path.join(os.path.dirname(__file__), 'log.txt'), mode='a', maxBytes=1000000)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    logging.info('Debut du log')
     
     # --- PARSING DES ARGUMENTS ---
     parser = argparse.ArgumentParser(description='LMS5xx CLI tool')
     parser.add_argument('-i', '--ip', default='192.168.1.12', help='Adresse IP du telemetre')
     parser.add_argument('-p', '--port', default='2111', type=int, help='Port du telemetre')
-    parser.add_argument('-s', '--size', default='200000', type=int, help='Nombre de trames par bloc')
+    parser.add_argument('-s', '--size', default='500000', type=int, help='Nombre de trames par bloc')
     parser.add_argument('-l', '--load', default='defaults.ini',\
         help='Charge les reglages depuis un fichier', )
     parser.add_argument('commande', choices=['test', 'start', 'stop', 'save', 'status', 'crash'],\
@@ -248,18 +261,22 @@ def main():
             time.sleep(0.5)
 
         # lecture fichier info
-        with open(os.path.join(os.path.dirname(__file__), '../info.txt'), 'r') as fic:
-            buff = fic.read()
+        try:
+            with open(os.path.join(CONFIGPATH, '../info.txt'), 'r') as fic:
+                buff = fic.read()
+        except FileNotFoundError:
+            buff = ''
 
         # les mesures sont enregistrees dans un dossier separe
         global PATH
-        PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())+'/'
+        PATH = PATH + time.strftime('%Y%m%d%H%M%S', time.localtime())+'/' # chemin du dossier des mesures
         os.mkdir(PATH)
 
         # ecriture debut fichier info
         with open(os.path.join(PATH, 'info.txt'), 'w') as fic:
             fic.write("Debut d'enregistrement: "+time.strftime("%Y%m%d%H%M%S", time.localtime())+'\n')
             fic.write(buff)
+            os.remove(os.path.join(PATH, 'info.txt'))
 
         # copie le fichier de config dans le dossier destination
         with open(os.path.join(os.path.dirname(__file__), args.load), 'r') as config:
@@ -293,19 +310,20 @@ def main():
         # attend que les processus fils aient termine
         while len(multiprocessing.active_children()) > 0:
             pass
-        logging.info('Processus principal termine')
 
-        logging.info('===== %s Fin du log', time.strftime('%d/%m/%Y %I:%M:%S', time.localtime()))
+        logging.info('Processus principal termine')
+        logging.info('Fin du log')
 
         # deplace les logs dans le dossier contenant les mesures
         with open(os.path.join(os.path.dirname(__file__), 'log.txt'), 'r') as logs:
             with open(os.path.join(PATH, 'log.txt'), 'w') as dstlog:
                 dstlog.write(logs.read())
-                os.remove(os.path.join(os.path.dirname(__file__), 'log.txt'))
 
+        # ajoute l'heure de fin au fichier info
         with open(os.path.join(PATH, 'info.txt'), 'a') as fic:
             fic.write("Fin d'enregistrement: "+time.strftime("%Y%m%d%H%M%S", time.localtime())+'\n')
 
+        # on signale la fin du programme en supprimant le fichier pid
         os.remove(os.path.join(os.path.dirname(__file__), 'pid'))
         return
 

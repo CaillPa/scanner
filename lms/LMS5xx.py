@@ -223,7 +223,7 @@ class LMS5xx:
 
         logging.debug('setScanCfg() envoye: %s', buf)
         logging.debug('setScanCfg() recu: %s', rec)
-
+        
     def setScanDataCfg(self, cfg):
         """
             Change la configuration d'acquisition des donnees
@@ -237,9 +237,8 @@ class LMS5xx:
         timestamp = bytes(hex(cfg.timestamp & 0xFF)[2:].upper(), encoding='utf8')
         outputinterval = bytes(hex(cfg.outputinterval & 0xFFFF)[2:].upper(), encoding='utf8')
 
-        buf = b'\x02sWN LMDscandatacfg 00 '+remission+b' '+resolution+b' 0 '+\
-            encoder+position+b' '+deviceName+b' 0 0 0 0 '+timestamp+b' '+\
-            outputinterval+b'\x03'
+        buf = b'\x02sWN LMDscandatacfg 0 0 '+remission+b' '+resolution+b' 0 '+b'0 0 '+\
+            position+b' '+deviceName+b' 0 '+timestamp+b' '+outputinterval+b'\x03'
 
         sent = self.sock.send(buf)
         if sent < len(buf):
@@ -249,8 +248,8 @@ class LMS5xx:
         if bytes([rec[0]]) != b'\x02':
             logging.warning('setScanDataCfg(): Trame recue non valide')
 
-        logging.debug('setScanDataCfg() envoye: %s', buf)
-        logging.debug('setScanDataCfg() recu: %s', rec)
+        logging.info('setScanDataCfg() envoye: %s', buf)
+        logging.info('setScanDataCfg() recu: %s', rec)
 
     def scanContinous(self, start):
         """
