@@ -119,19 +119,25 @@ def main():
         path = os.path.join(srcdir, fil) # chemin complet du fichier courant
         with lzma.open(path) as fic:
             print(path)
-            fic = lzma.LZMADecompressor().decompress(fic.read()) # fichier decompresse
-            buff.extend(parseDatagrams(fic, args.echo, args.RSSI))
+            raw = lzma.LZMADecompressor().decompress(fic.read()) # fichier decompresse
+            buff.extend(parseDatagrams(raw, args.echo, args.RSSI))
+            del raw
+            del path
 
             ## creation des fichiers de taille fixe
             w = len(buff[0]) # longeur en octet d'une trame
-            if w*len(buff) > size*10**6: # si la taille du buffer depasse la taille max
+            while w*len(buff) > size*10**6: # si la taille du buffer depasse la taille max
                 ind = int((size*10**6)/w) # nombre max de lignes pour respecter la taille max
                 filename = os.path.join(dstdir, 'out'+str(n)+'.txt')
                 print(filename)
                 with open(filename, 'w') as out:
                     out.write('\n'.join(buff[:ind]))
+                    #out.flush()
                 n = n+1
                 buff = buff[ind:]
+                del out
+        del fic
+
     # enregistre les donnees restantes
     filename = os.path.join(dstdir, 'out'+str(n)+'.txt')
     print(filename)
