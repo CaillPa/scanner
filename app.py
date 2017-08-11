@@ -23,7 +23,7 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 
 # base de donnees d'utilisateurs
-user_db = {'admin': {'pw': 'admin'}, 'operateur': {'pw': 'op'}}
+user_db = {'admin': {'pw': 'admin12'}, 'operateur': {'pw': 'operateur12'}}
 # parametres de connexion par defaut
 ip = '192.168.1.12'
 port = '2111'
